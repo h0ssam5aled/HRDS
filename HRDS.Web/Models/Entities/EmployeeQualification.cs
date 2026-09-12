@@ -19,7 +19,7 @@ public partial class EmployeeQualification
 
     public short? GraduationYear { get; set; }
 
-    public decimal? GradeOrGpa { get; set; }
+    public int? GradeOrGpa { get; set; }
 
     public string? Notes { get; set; }
 

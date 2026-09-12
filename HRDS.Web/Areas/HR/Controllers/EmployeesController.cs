@@ -636,7 +636,8 @@ namespace HRDS.Web.Areas.HR.Controllers
                 FacultyId = qualification?.FacultyId,
                 MajorId = qualification?.MajorId,
                 GraduationYear = qualification?.GraduationYear,
-                GradeOrGpaId = qualification?.GradeOrGpa.HasValue == true ? (int?)Math.Round(qualification.GradeOrGpa.Value) : null,
+                //GradeOrGpaId = qualification?.GradeOrGpa.HasValue == true ? (int?)Math.Round(qualification.GradeOrGpa.Value) : null,
+                GradeOrGpaId = qualification?.GradeOrGpa,
                 QualificationNotes = qualification?.Notes,
 
                 // الحساب البنكي

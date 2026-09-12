@@ -5,7 +5,7 @@ namespace HRDS.Web.Models.Entities;
 
 public partial class EducationGrade
 {
-    public decimal GradeId { get; set; }
+    public int GradeId { get; set; }
 
     public string GradeCode { get; set; } = null!;
 

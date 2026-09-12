@@ -231,6 +231,8 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("AcademicFaculties", "HR");
 
+            entity.HasIndex(e => e.InstitutionId, "IX_AcademicFaculties_InstitutionId");
+
             entity.Property(e => e.FacultyCode).HasMaxLength(50);
             entity.Property(e => e.FacultyNameAr).HasMaxLength(200);
             entity.Property(e => e.FacultyNameEn)
@@ -249,6 +251,8 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("AcademicMajors", "HR");
 
+            entity.HasIndex(e => e.FacultyId, "IX_AcademicMajors_FacultyId");
+
             entity.Property(e => e.MajorCode).HasMaxLength(50);
             entity.Property(e => e.MajorNameAr).HasMaxLength(200);
             entity.Property(e => e.MajorNameEn)
@@ -266,6 +270,12 @@ public partial class HRDSContext : DbContext
             entity.HasKey(e => e.AccountId).HasName("PK__Accounts__349DA5A668E22FCA");
 
             entity.ToTable("Accounts", "FI");
+
+            entity.HasIndex(e => e.AccountTypeId, "IX_Accounts_AccountTypeId");
+
+            entity.HasIndex(e => e.CurrencyId, "IX_Accounts_CurrencyId");
+
+            entity.HasIndex(e => e.ParentAccountId, "IX_Accounts_ParentAccountId");
 
             entity.Property(e => e.AccountCode).HasMaxLength(50);
             entity.Property(e => e.AccountLevel).HasDefaultValue((byte)1);
@@ -445,6 +455,8 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("BankBranches", "FI");
 
+            entity.HasIndex(e => e.BankId, "IX_BankBranches_BankId");
+
             entity.Property(e => e.BankBranchAddress).HasMaxLength(300);
             entity.Property(e => e.BankBranchCode).HasMaxLength(50);
             entity.Property(e => e.BankBranchNameAr).HasMaxLength(200);
@@ -483,9 +495,13 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("BusinessMissionExpenses", "HR");
 
+            entity.HasIndex(e => e.ExpenseTypeId, "IX_BusinessMissionExpenses_ExpenseTypeId");
+
+            entity.HasIndex(e => e.MissionRequestId, "IX_BusinessMissionExpenses_MissionRequestId");
+
             entity.Property(e => e.Amount).HasColumnType("decimal(18, 4)");
             entity.Property(e => e.ApprovedAmount)
-                .HasDefaultValue(0m)
+                .HasDefaultValue(0.0m)
                 .HasColumnType("decimal(18, 4)");
             entity.Property(e => e.AttachmentPath).HasMaxLength(500);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
@@ -509,13 +525,17 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("BusinessMissionRequests", "HR");
 
+            entity.HasIndex(e => e.MissionTypeId, "IX_BusinessMissionRequests_MissionTypeId");
+
+            entity.HasIndex(e => e.OverallStatusId, "IX_BusinessMissionRequests_OverallStatusId");
+
             entity.HasIndex(e => new { e.EmployeeId, e.StartDate }, "IX_HRBusinessMissionRequests_Employee_StartDate").IsDescending(false, true);
 
             entity.Property(e => e.AttachmentPath).HasMaxLength(500);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.Destination).HasMaxLength(500);
             entity.Property(e => e.EstimatedAllowance)
-                .HasDefaultValue(0m)
+                .HasDefaultValue(0.0m)
                 .HasColumnType("decimal(18, 4)");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Purpose).HasMaxLength(500);
@@ -555,6 +575,8 @@ public partial class HRDSContext : DbContext
             entity.HasKey(e => e.CityId).HasName("PK_Config_Cities");
 
             entity.ToTable("Cities", "Config");
+
+            entity.HasIndex(e => new { e.GovernorateId, e.CityId }, "AK_Cities_GovernorateId_CityId").IsUnique();
 
             entity.HasIndex(e => e.GovernorateId, "IX_Config_Cities_GovernorateId");
 
@@ -621,6 +643,8 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("CompanyAssets", "HR");
 
+            entity.HasIndex(e => e.AssetTypeId, "IX_CompanyAssets_AssetTypeId");
+
             entity.HasIndex(e => e.AssetCode, "UQ__CompanyA__2DDE5240917F0B36").IsUnique();
 
             entity.Property(e => e.AssetCode).HasMaxLength(50);
@@ -644,6 +668,8 @@ public partial class HRDSContext : DbContext
             entity.HasKey(e => e.CompanyBranchId).HasName("PK_Core_CompanyBranches");
 
             entity.ToTable("CompanyBranches", "Core");
+
+            entity.HasIndex(e => new { e.CompanyId, e.CompanyBranchId }, "AK_CompanyBranches_CompanyId_CompanyBranchId").IsUnique();
 
             entity.HasIndex(e => e.CompanyId, "IX_Core_CompanyBranches_CompanyId");
 
@@ -692,6 +718,8 @@ public partial class HRDSContext : DbContext
             entity.HasKey(e => e.CostCenterId).HasName("PK__CostCent__89D876F1E996739B");
 
             entity.ToTable("CostCenters", "FI");
+
+            entity.HasIndex(e => e.ParentCostCenterId, "IX_CostCenters_ParentCostCenterId");
 
             entity.Property(e => e.CostCenterCode).HasMaxLength(50);
             entity.Property(e => e.CostCenterLevel).HasDefaultValue((byte)1);
@@ -755,6 +783,10 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("CurrencyRates", "FI");
 
+            entity.HasIndex(e => e.BaseCurrencyId, "IX_CurrencyRates_BaseCurrencyId");
+
+            entity.HasIndex(e => e.CurrencyId, "IX_CurrencyRates_CurrencyId");
+
             entity.Property(e => e.CreatedDate).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.ExchangeRate).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
@@ -795,11 +827,16 @@ public partial class HRDSContext : DbContext
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.DepartmentCode).HasMaxLength(50);
+            entity.Property(e => e.DepartmentLevel).HasDefaultValue((byte)1);
             entity.Property(e => e.DepartmentNameAr).HasMaxLength(200);
             entity.Property(e => e.DepartmentNameEn)
                 .HasMaxLength(200)
                 .IsUnicode(false);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+            entity.HasOne(d => d.ParentDepartment).WithMany(p => p.InverseParentDepartment)
+                .HasForeignKey(d => d.ParentDepartmentId)
+                .HasConstraintName("FK_Departments_ParentDepartment");
         });
 
         modelBuilder.Entity<Document>(entity =>
@@ -807,6 +844,10 @@ public partial class HRDSContext : DbContext
             entity.HasKey(e => e.DocumentId).HasName("PK__Document__1ABEEF0FEC61961F");
 
             entity.ToTable("Documents", "HR");
+
+            entity.HasIndex(e => e.DocumentTypeId, "IX_Documents_DocumentTypeId");
+
+            entity.HasIndex(e => e.EmployeeId, "IX_Documents_EmployeeId");
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.DocumentNumber).HasMaxLength(50);
@@ -844,7 +885,7 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("EducationGrades", "HR");
 
-            entity.Property(e => e.GradeId).HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.GradeId).ValueGeneratedNever();
             entity.Property(e => e.GradeCode).HasMaxLength(50);
             entity.Property(e => e.GradeNameAr).HasMaxLength(200);
             entity.Property(e => e.GradeNameEn)
@@ -870,6 +911,8 @@ public partial class HRDSContext : DbContext
             entity.HasKey(e => e.InstitutionId).HasName("PK__Educatio__8DF6B6ADF23BFD8C");
 
             entity.ToTable("EducationalInstitutions", "HR");
+
+            entity.HasIndex(e => e.InstitutionTypeId, "IX_EducationalInstitutions_InstitutionTypeId");
 
             entity.Property(e => e.InstitutionCode).HasMaxLength(50);
             entity.Property(e => e.InstitutionNameAr).HasMaxLength(200);
@@ -969,6 +1012,8 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("EmployeeAllowances", "HR");
 
+            entity.HasIndex(e => e.AllowanceTypeId, "IX_EmployeeAllowances_AllowanceTypeId");
+
             entity.HasIndex(e => new { e.EmployeeId, e.AllowanceTypeId }, "UX_HREmployeeAllowances_Current")
                 .IsUnique()
                 .HasFilter("([ToDate] IS NULL AND [IsActive]=(1) AND [IsDeleted]=(0))");
@@ -994,6 +1039,8 @@ public partial class HRDSContext : DbContext
             entity.HasKey(e => e.AssignmentId).HasName("PK__Employee__32499E773F350935");
 
             entity.ToTable("EmployeeAssetAssignments", "HR");
+
+            entity.HasIndex(e => e.EmployeeId, "IX_EmployeeAssetAssignments_EmployeeId");
 
             entity.HasIndex(e => e.AssetId, "UX_HREmployeeAssetAssignments_OpenAsset")
                 .IsUnique()
@@ -1021,6 +1068,8 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("EmployeeBankAccounts", "HR");
 
+            entity.HasIndex(e => e.EmployeeId, "IX_EmployeeBankAccounts_EmployeeId");
+
             entity.Property(e => e.AccountNumber).HasMaxLength(50);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.Iban)
@@ -1040,6 +1089,12 @@ public partial class HRDSContext : DbContext
             entity.HasKey(e => e.BonusId).HasName("PK__Employee__8E5547680A9E3867");
 
             entity.ToTable("EmployeeBonuses", "HR");
+
+            entity.HasIndex(e => e.BonusTypeId, "IX_EmployeeBonuses_BonusTypeId");
+
+            entity.HasIndex(e => e.EmployeeId, "IX_EmployeeBonuses_EmployeeId");
+
+            entity.HasIndex(e => e.PayrollRunId, "IX_EmployeeBonuses_PayrollRunId");
 
             entity.Property(e => e.Amount).HasColumnType("decimal(18, 4)");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
@@ -1066,6 +1121,8 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("EmployeeDeductions", "HR");
 
+            entity.HasIndex(e => e.DeductionTypeId, "IX_EmployeeDeductions_DeductionTypeId");
+
             entity.HasIndex(e => new { e.EmployeeId, e.DeductionTypeId }, "UX_HREmployeeDeductions_Current")
                 .IsUnique()
                 .HasFilter("([ToDate] IS NULL AND [IsActive]=(1) AND [IsDeleted]=(0))");
@@ -1091,6 +1148,8 @@ public partial class HRDSContext : DbContext
             entity.HasKey(e => e.BalanceId).HasName("PK__Employee__A760D5BE8C2BF5F1");
 
             entity.ToTable("EmployeeLeaveBalances", "HR");
+
+            entity.HasIndex(e => e.LeaveTypeId, "IX_EmployeeLeaveBalances_LeaveTypeId");
 
             entity.HasIndex(e => new { e.EmployeeId, e.LeaveTypeId, e.Year }, "UX_HREmployeeLeaveBalances_Employee_LeaveType_Year")
                 .IsUnique()
@@ -1121,6 +1180,8 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("EmployeeOvertimeRequests", "HR");
 
+            entity.HasIndex(e => e.OverallStatusId, "IX_EmployeeOvertimeRequests_OverallStatusId");
+
             entity.HasIndex(e => new { e.EmployeeId, e.OvertimeDate }, "IX_HREmployeeOvertimeRequests_Employee_Date").IsDescending(false, true);
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
@@ -1145,12 +1206,18 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("EmployeePenalties", "HR");
 
+            entity.HasIndex(e => e.EmployeeId, "IX_EmployeePenalties_EmployeeId");
+
+            entity.HasIndex(e => e.PayrollRunId, "IX_EmployeePenalties_PayrollRunId");
+
+            entity.HasIndex(e => e.PenaltyTypeId, "IX_EmployeePenalties_PenaltyTypeId");
+
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.DeductionAmount)
-                .HasDefaultValue(0m)
+                .HasDefaultValue(0.0m)
                 .HasColumnType("decimal(18, 4)");
             entity.Property(e => e.DeductionDays)
-                .HasDefaultValue(0m)
+                .HasDefaultValue(0.0m)
                 .HasColumnType("decimal(5, 2)");
             entity.Property(e => e.Reason).HasMaxLength(500);
 
@@ -1174,6 +1241,10 @@ public partial class HRDSContext : DbContext
             entity.HasKey(e => e.EmployeePositionId).HasName("PK__Employee__6FDE90605DAF4335");
 
             entity.ToTable("EmployeePositions", "HR");
+
+            entity.HasIndex(e => e.AssignmentReasonId, "IX_EmployeePositions_AssignmentReasonId");
+
+            entity.HasIndex(e => e.PositionId, "IX_EmployeePositions_PositionId");
 
             entity.HasIndex(e => new { e.EmployeeId, e.FromDate }, "IX_HREmployeePositions_Employee_FromDate").IsDescending(false, true);
 
@@ -1206,10 +1277,20 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("EmployeeQualifications", "HR");
 
+            entity.HasIndex(e => e.EmployeeId, "IX_EmployeeQualifications_EmployeeId");
+
+            entity.HasIndex(e => e.FacultyId, "IX_EmployeeQualifications_FacultyId");
+
+            entity.HasIndex(e => e.GradeOrGpa, "IX_EmployeeQualifications_GradeOrGPA");
+
+            entity.HasIndex(e => e.InstitutionId, "IX_EmployeeQualifications_InstitutionId");
+
+            entity.HasIndex(e => e.MajorId, "IX_EmployeeQualifications_MajorId");
+
+            entity.HasIndex(e => e.QualificationId, "IX_EmployeeQualifications_QualificationId");
+
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
-            entity.Property(e => e.GradeOrGpa)
-                .HasColumnType("decimal(5, 2)")
-                .HasColumnName("GradeOrGPA");
+            entity.Property(e => e.GradeOrGpa).HasColumnName("GradeOrGPA");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Notes).HasMaxLength(500);
 
@@ -1246,6 +1327,10 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("EmployeeRemoteWorkRequests", "HR");
 
+            entity.HasIndex(e => e.EmployeeId, "IX_EmployeeRemoteWorkRequests_EmployeeId");
+
+            entity.HasIndex(e => e.OverallStatusId, "IX_EmployeeRemoteWorkRequests_OverallStatusId");
+
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Reason).HasMaxLength(500);
@@ -1267,6 +1352,8 @@ public partial class HRDSContext : DbContext
             entity.HasKey(e => e.SalaryDetailId).HasName("PK__Employee__EE7B1F8483F4474C");
 
             entity.ToTable("EmployeeSalaryDetails", "HR");
+
+            entity.HasIndex(e => e.EmployeeId, "IX_EmployeeSalaryDetails_EmployeeId");
 
             entity.HasIndex(e => e.PayrollRunId, "IX_HREmployeeSalaryDetails_PayrollRun");
 
@@ -1341,6 +1428,12 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("EmployeeWorkSchedule", "HR");
 
+            entity.HasIndex(e => e.EmployeeId, "IX_EmployeeWorkSchedule_EmployeeId");
+
+            entity.HasIndex(e => e.PatternId, "IX_EmployeeWorkSchedule_PatternId");
+
+            entity.HasIndex(e => e.ShiftId, "IX_EmployeeWorkSchedule_ShiftId");
+
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Priority).HasDefaultValue((byte)1);
@@ -1392,6 +1485,18 @@ public partial class HRDSContext : DbContext
             entity.HasKey(e => e.HistoryId).HasName("PK__Employme__4D7B4ABD73122633");
 
             entity.ToTable("EmploymentHistory", "HR");
+
+            entity.HasIndex(e => e.DepartmentId, "IX_EmploymentHistory_DepartmentId");
+
+            entity.HasIndex(e => e.DirectManagerId, "IX_EmploymentHistory_DirectManagerId");
+
+            entity.HasIndex(e => e.EmployeeStatusId, "IX_EmploymentHistory_EmployeeStatusId");
+
+            entity.HasIndex(e => e.EmploymentTypeId, "IX_EmploymentHistory_EmploymentTypeId");
+
+            entity.HasIndex(e => e.JobLevelId, "IX_EmploymentHistory_JobLevelId");
+
+            entity.HasIndex(e => e.JobTitleId, "IX_EmploymentHistory_JobTitleId");
 
             entity.HasIndex(e => new { e.EmployeeId, e.HireDate }, "IX_HREmploymentHistory_Employee_HireDate").IsDescending(false, true);
 
@@ -1491,6 +1596,8 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("Governorates", "Config");
 
+            entity.HasIndex(e => new { e.CountryId, e.GovernorateId }, "AK_Governorates_CountryId_GovernorateId").IsUnique();
+
             entity.HasIndex(e => e.CountryId, "IX_Config_Governorates_CountryId");
 
             entity.HasIndex(e => new { e.IsActive, e.SortOrder }, "IX_Config_Governorates_IsActive_SortOrder");
@@ -1564,6 +1671,8 @@ public partial class HRDSContext : DbContext
 
             entity.HasIndex(e => e.JobTitleCode, "IX_HRJobTitles_Code");
 
+            entity.HasIndex(e => e.JobGroupId, "IX_JobTitles_JobGroupId");
+
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.JobTitleCode).HasMaxLength(50);
@@ -1602,6 +1711,12 @@ public partial class HRDSContext : DbContext
 
             entity.HasIndex(e => new { e.EmployeeId, e.StartDate }, "IX_HRLeaveRequests_Employee_StartDate").IsDescending(false, true);
 
+            entity.HasIndex(e => e.LeaveTypeId, "IX_LeaveRequests_LeaveTypeId");
+
+            entity.HasIndex(e => e.OverallStatusId, "IX_LeaveRequests_OverallStatusId");
+
+            entity.HasIndex(e => e.SubstituteEmployeeId, "IX_LeaveRequests_SubstituteEmployeeId");
+
             entity.Property(e => e.AttachmentPath).HasMaxLength(500);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
@@ -1634,6 +1749,10 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("LeaveRequestApprovals", "HR");
 
+            entity.HasIndex(e => e.ApproverEmployeeId, "IX_LeaveRequestApprovals_ApproverEmployeeId");
+
+            entity.HasIndex(e => e.StatusId, "IX_LeaveRequestApprovals_StatusId");
+
             entity.HasIndex(e => new { e.LeaveRequestId, e.StepOrder }, "UX_HRLeaveRequestApprovals_Request_Step")
                 .IsUnique()
                 .HasFilter("([IsDeleted]=(0))");
@@ -1664,6 +1783,8 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("LeaveRequestAttachments", "HR");
 
+            entity.HasIndex(e => e.LeaveRequestId, "IX_LeaveRequestAttachments_LeaveRequestId");
+
             entity.Property(e => e.FileName).HasMaxLength(250);
             entity.Property(e => e.FilePath).HasMaxLength(500);
             entity.Property(e => e.FileType)
@@ -1685,9 +1806,11 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("LeaveType", "HR");
 
+            entity.HasIndex(e => e.LeaveCategoryId, "IX_LeaveType_LeaveCategoryId");
+
             entity.Property(e => e.AllowFutureRequest).HasDefaultValue(true);
             entity.Property(e => e.CarryForwardLimit)
-                .HasDefaultValue(0m)
+                .HasDefaultValue(0.0m)
                 .HasColumnType("decimal(18, 4)");
             entity.Property(e => e.ColorCode)
                 .HasMaxLength(20)
@@ -1725,6 +1848,10 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("Loans", "HR");
 
+            entity.HasIndex(e => e.EmployeeId, "IX_Loans_EmployeeId");
+
+            entity.HasIndex(e => e.StatusId, "IX_Loans_StatusId");
+
             entity.Property(e => e.LoanAmount).HasColumnType("decimal(18, 4)");
             entity.Property(e => e.MonthlyInstallment).HasColumnType("decimal(18, 4)");
 
@@ -1744,6 +1871,8 @@ public partial class HRDSContext : DbContext
             entity.HasKey(e => e.InstallmentId).HasName("PK__LoanInst__42B42D8272F11AAB");
 
             entity.ToTable("LoanInstallments", "HR");
+
+            entity.HasIndex(e => e.PayrollRunId, "IX_LoanInstallments_PayrollRunId");
 
             entity.HasIndex(e => new { e.LoanId, e.InstallmentNumber }, "UX_HRLoanInstallments_Loan_Number").IsUnique();
 
@@ -1825,6 +1954,8 @@ public partial class HRDSContext : DbContext
         {
             entity.ToTable("ModelActions", "Security");
 
+            entity.HasIndex(e => e.ActionId, "IX_ModelActions_ActionId");
+
             entity.HasIndex(e => new { e.ModelId, e.ActionId }, "UQ_ModelActions_Model_Action").IsUnique();
 
             entity.Property(e => e.IsActive).HasDefaultValue(true);
@@ -1880,6 +2011,8 @@ public partial class HRDSContext : DbContext
             entity.HasKey(e => new { e.AncestorPositionId, e.DescendantPositionId }).HasName("PK__Organiza__930E755F31B1B8A3");
 
             entity.ToTable("OrganizationTree", "HR");
+
+            entity.HasIndex(e => e.DescendantPositionId, "IX_OrganizationTree_DescendantPositionId");
 
             entity.HasOne(d => d.AncestorPosition).WithMany(p => p.OrganizationTreeAncestorPositions)
                 .HasForeignKey(d => d.AncestorPositionId)
@@ -1985,6 +2118,10 @@ public partial class HRDSContext : DbContext
 
             entity.HasIndex(e => new { e.EmployeeId, e.PermissionDate }, "IX_HRPermissionRequests_Employee_Date").IsDescending(false, true);
 
+            entity.HasIndex(e => e.OverallStatusId, "IX_PermissionRequests_OverallStatusId");
+
+            entity.HasIndex(e => e.PermissionTypeId, "IX_PermissionRequests_PermissionTypeId");
+
             entity.Property(e => e.Reason).HasMaxLength(300);
 
             entity.HasOne(d => d.Employee).WithMany(p => p.PermissionRequests)
@@ -2025,6 +2162,18 @@ public partial class HRDSContext : DbContext
             entity.ToTable("Positions", "HR");
 
             entity.HasIndex(e => e.PositionCode, "IX_HRPositions_Code");
+
+            entity.HasIndex(e => e.JobLevelId, "IX_Positions_JobLevelId");
+
+            entity.HasIndex(e => e.JobTitleId, "IX_Positions_JobTitleId");
+
+            entity.HasIndex(e => e.ParentPositionId, "IX_Positions_ParentPositionId");
+
+            entity.HasIndex(e => e.PositionStatusId, "IX_Positions_PositionStatusId");
+
+            entity.HasIndex(e => e.ReportsToPositionId, "IX_Positions_ReportsToPositionId");
+
+            entity.HasIndex(e => e.UnitId, "IX_Positions_UnitId");
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.HeadCount).HasDefaultValue((short)1);
@@ -2229,13 +2378,17 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("SafetyIncidents", "HR");
 
+            entity.HasIndex(e => e.EmployeeId, "IX_SafetyIncidents_EmployeeId");
+
+            entity.HasIndex(e => e.SafetyTypeId, "IX_SafetyIncidents_SafetyTypeId");
+
             entity.Property(e => e.ActionTaken).HasMaxLength(1000);
             entity.Property(e => e.CostImpact)
-                .HasDefaultValue(0m)
+                .HasDefaultValue(0.0m)
                 .HasColumnType("decimal(18, 4)");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.DaysLost)
-                .HasDefaultValue(0m)
+                .HasDefaultValue(0.0m)
                 .HasColumnType("decimal(5, 2)");
             entity.Property(e => e.Description).HasMaxLength(1000);
             entity.Property(e => e.InjuryType).HasMaxLength(200);
@@ -2274,6 +2427,8 @@ public partial class HRDSContext : DbContext
 
             entity.HasIndex(e => e.SectionCode, "IX_HRSections_Code");
 
+            entity.HasIndex(e => e.DepartmentId, "IX_Sections_DepartmentId");
+
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.SectionCode).HasMaxLength(50);
@@ -2293,6 +2448,8 @@ public partial class HRDSContext : DbContext
             entity.HasKey(e => e.ShiftId).HasName("PK__Shift__C0A83881E685353D");
 
             entity.ToTable("Shift", "HR");
+
+            entity.HasIndex(e => e.ShiftTypeId, "IX_Shift_ShiftTypeId");
 
             entity.Property(e => e.AllowLateDeduction).HasDefaultValue(true);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
@@ -2314,6 +2471,8 @@ public partial class HRDSContext : DbContext
             entity.HasKey(e => e.BreakId).HasName("PK__ShiftBre__B267A6392407487A");
 
             entity.ToTable("ShiftBreak", "HR");
+
+            entity.HasIndex(e => e.ShiftId, "IX_ShiftBreak_ShiftId");
 
             entity.Property(e => e.BreakCode).HasMaxLength(50);
             entity.Property(e => e.BreakNameAr).HasMaxLength(200);
@@ -2350,6 +2509,8 @@ public partial class HRDSContext : DbContext
             entity.HasKey(e => e.PatternDetailId).HasName("PK__ShiftPat__8244665B52202B3E");
 
             entity.ToTable("ShiftPatternDetail", "HR");
+
+            entity.HasIndex(e => e.ShiftId, "IX_ShiftPatternDetail_ShiftId");
 
             entity.HasIndex(e => new { e.PatternId, e.DayNumber }, "UX_HRShiftPatternDetail_Pattern_Day").IsUnique();
 
@@ -2389,6 +2550,8 @@ public partial class HRDSContext : DbContext
             entity.ToTable("Units", "HR");
 
             entity.HasIndex(e => e.UnitCode, "IX_HRUnits_Code");
+
+            entity.HasIndex(e => e.SectionId, "IX_Units_SectionId");
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.Description).HasMaxLength(500);
@@ -2444,11 +2607,15 @@ public partial class HRDSContext : DbContext
 
             entity.HasIndex(e => e.UserId, "IX_Security_UserAccess_UserId");
 
+            entity.HasIndex(e => new { e.CompanyId, e.CompanyBranchId }, "IX_UserAccess_CompanyId_CompanyBranchId");
+
             entity.HasIndex(e => new { e.UserId, e.CompanyBranchId }, "UX_Security_UserAccess_Branch")
                 .IsUnique()
                 .HasFilter("([CompanyBranchId] IS NOT NULL)");
 
-            entity.HasIndex(e => new { e.UserId, e.CompanyId, e.CompanyBranchId }, "UX_Security_UserAccess_User_Company_Branch").IsUnique();
+            entity.HasIndex(e => new { e.UserId, e.CompanyId, e.CompanyBranchId }, "UX_Security_UserAccess_User_Company_Branch")
+                .IsUnique()
+                .HasFilter("([CompanyId] IS NOT NULL AND [CompanyBranchId] IS NOT NULL)");
 
             entity.Property(e => e.IsActive).HasDefaultValue(true);
 
@@ -2497,6 +2664,12 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("WorkflowStepsConfig", "HR");
 
+            entity.HasIndex(e => e.ApproverTypeId, "IX_WorkflowStepsConfig_ApproverTypeId");
+
+            entity.HasIndex(e => e.SpecificEmployeeId, "IX_WorkflowStepsConfig_SpecificEmployeeId");
+
+            entity.HasIndex(e => e.SpecificPositionId, "IX_WorkflowStepsConfig_SpecificPositionId");
+
             entity.HasIndex(e => new { e.WorkflowTemplateId, e.StepOrder }, "UX_HRWorkflowStepsConfig_Template_Step")
                 .IsUnique()
                 .HasFilter("([IsActive]=(1))");
@@ -2528,6 +2701,8 @@ public partial class HRDSContext : DbContext
             entity.HasKey(e => e.TemplateId).HasName("PK__Workflow__F87ADD277CD369CA");
 
             entity.ToTable("WorkflowTemplates", "HR");
+
+            entity.HasIndex(e => e.ProcessTypeId, "IX_WorkflowTemplates_ProcessTypeId");
 
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.TemplateCode).HasMaxLength(50);

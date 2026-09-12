@@ -46,13 +46,14 @@ namespace HRDS.Web.Areas.Security.Controllers
             if (!string.IsNullOrEmpty(superAdminUser) &&
                 string.Equals(model.Username, superAdminUser, StringComparison.OrdinalIgnoreCase) &&
                 !string.IsNullOrEmpty(superAdminHash))
-                {
-                    var hasher = new PasswordHasher<object>();
-                    var result = hasher.VerifyHashedPassword(new object(), superAdminHash, model.Password ?? string.Empty);
+            {
+                var hasher = new PasswordHasher<object>();
 
-                    if (result == PasswordVerificationResult.Success || result == PasswordVerificationResult.SuccessRehashNeeded)
-                    {
-                        var claims = new List<Claim>
+                var result = hasher.VerifyHashedPassword(new object(), superAdminHash, model.Password ?? string.Empty);
+
+                if (result == PasswordVerificationResult.Success || result == PasswordVerificationResult.SuccessRehashNeeded)
+                {
+                    var claims = new List<Claim>
                         {
                             new Claim(ClaimTypes.NameIdentifier, "0"),
                             new Claim(ClaimTypes.Name, superAdminUser),
@@ -60,12 +61,12 @@ namespace HRDS.Web.Areas.Security.Controllers
                             new Claim("IsSuperAdmin", "True")
                         };
 
-                        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
+                    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                    await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
 
-                        return RedirectToAction("Index", "Home", new { area = "" });
-                    }
+                    return RedirectToAction("Index", "Home", new { area = "" });
                 }
+            }
 
             // 2. التحقق من مستخدم قاعدة البيانات
             var user = await _context.Users
