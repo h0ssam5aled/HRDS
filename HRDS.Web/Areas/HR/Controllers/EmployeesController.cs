@@ -374,7 +374,7 @@ namespace HRDS.Web.Areas.HR.Controllers
                             {
                                 EmployeeId = employeeEntity.EmployeeId,
                                 AllowanceTypeId = item.AllowanceTypeId.Value,
-                                Amount = item.Amount,
+                                Amount = item.Amount.Value,
                                 FromDate = item.FromDate.Value,
                                 ToDate = item.ToDate,
                                 Notes = item.Notes?.Trim(),
@@ -397,7 +397,7 @@ namespace HRDS.Web.Areas.HR.Controllers
                             {
                                 EmployeeId = employeeEntity.EmployeeId,
                                 DeductionTypeId = item.DeductionTypeId.Value,
-                                Amount = item.Amount,
+                                Amount = item.Amount.Value,
                                 FromDate = item.FromDate.Value,
                                 ToDate = item.ToDate,
                                 Notes = item.Notes?.Trim(),
@@ -1044,7 +1044,7 @@ namespace HRDS.Web.Areas.HR.Controllers
                                 if (existingAllowance != null)
                                 {
                                     existingAllowance.AllowanceTypeId = item.AllowanceTypeId.Value;
-                                    existingAllowance.Amount = item.Amount;
+                                    existingAllowance.Amount = item.Amount.Value;
                                     existingAllowance.FromDate = item.FromDate.Value;
                                     existingAllowance.ToDate = item.ToDate;
                                     existingAllowance.Notes = item.Notes?.Trim();
@@ -1058,7 +1058,7 @@ namespace HRDS.Web.Areas.HR.Controllers
                                 {
                                     EmployeeId = id,
                                     AllowanceTypeId = item.AllowanceTypeId.Value,
-                                    Amount = item.Amount,
+                                    Amount = item.Amount.Value,
                                     FromDate = item.FromDate.Value,
                                     ToDate = item.ToDate,
                                     Notes = item.Notes?.Trim(),
@@ -1093,7 +1093,7 @@ namespace HRDS.Web.Areas.HR.Controllers
                                 if (existingDeduction != null)
                                 {
                                     existingDeduction.DeductionTypeId = item.DeductionTypeId.Value;
-                                    existingDeduction.Amount = item.Amount;
+                                    existingDeduction.Amount = item.Amount.Value;
                                     existingDeduction.FromDate = item.FromDate.Value;
                                     existingDeduction.ToDate = item.ToDate;
                                     existingDeduction.Notes = item.Notes?.Trim();
@@ -1107,7 +1107,7 @@ namespace HRDS.Web.Areas.HR.Controllers
                                 {
                                     EmployeeId = id,
                                     DeductionTypeId = item.DeductionTypeId.Value,
-                                    Amount = item.Amount,
+                                    Amount = item.Amount.Value,
                                     FromDate = item.FromDate.Value,
                                     ToDate = item.ToDate,
                                     Notes = item.Notes?.Trim(),

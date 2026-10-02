@@ -175,7 +175,7 @@ namespace HRDS.Web.Areas.HR.ViewModels
         {
             public int? AllowanceId { get; set; } // إضافة الحقل لمعالجة التعديل
             public int? AllowanceTypeId { get; set; }
-            public decimal Amount { get; set; }
+            public decimal? Amount { get; set; }
             public DateOnly? FromDate { get; set; }
             public DateOnly? ToDate { get; set; }
             public string? Notes { get; set; }
@@ -185,7 +185,7 @@ namespace HRDS.Web.Areas.HR.ViewModels
         {
             public int? DeductionId { get; set; } // إضافة الحقل لمعالجة التعديل
             public int? DeductionTypeId { get; set; }
-            public decimal Amount { get; set; }
+            public decimal? Amount { get; set; }
             public DateOnly? FromDate { get; set; }
             public DateOnly? ToDate { get; set; }
             public string? Notes { get; set; }

@@ -17,11 +17,11 @@ public partial class Employee
 
     public string LastNameAr { get; set; } = null!;
 
-    public string? FirstNameEn { get; set; }
+    public string FirstNameEn { get; set; } = null!;
 
     public string? MiddleNameEn { get; set; }
 
-    public string? LastNameEn { get; set; }
+    public string LastNameEn { get; set; } = null!;
 
     public int? GenderId { get; set; }
 
@@ -43,7 +43,7 @@ public partial class Employee
 
     public bool IsActive { get; set; }
 
-    public int? CreatedBy { get; set; }
+    public int CreatedBy { get; set; }
 
     public DateTime CreatedAt { get; set; }
 

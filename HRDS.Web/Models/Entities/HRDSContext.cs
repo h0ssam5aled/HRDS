@@ -223,6 +223,7 @@ public partial class HRDSContext : DbContext
 
     public virtual DbSet<WorkflowTemplate> WorkflowTemplates { get; set; }
 
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AcademicFaculty>(entity =>
@@ -1031,7 +1032,7 @@ public partial class HRDSContext : DbContext
             entity.HasOne(d => d.Employee).WithMany(p => p.EmployeeAllowances)
                 .HasForeignKey(d => d.EmployeeId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_HREmployeeAllowances_Employee");
+                .HasConstraintName("FK_EmployeeAllowances_Employees");
         });
 
         modelBuilder.Entity<EmployeeAssetAssignment>(entity =>
@@ -1140,7 +1141,7 @@ public partial class HRDSContext : DbContext
             entity.HasOne(d => d.Employee).WithMany(p => p.EmployeeDeductions)
                 .HasForeignKey(d => d.EmployeeId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_HREmployeeDeductions_Employee");
+                .HasConstraintName("FK_EmployeeDeductions_Employees");
         });
 
         modelBuilder.Entity<EmployeeLeaveBalance>(entity =>
