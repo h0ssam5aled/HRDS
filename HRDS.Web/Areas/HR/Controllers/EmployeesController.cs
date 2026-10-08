@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using static HRDS.Web.Areas.HR.ViewModels.EmployeeViewModel;
 
@@ -66,6 +67,10 @@ namespace HRDS.Web.Areas.HR.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(EmployeeViewModel model)
         {
+            ValidateEmployeeDates(model);
+            ValidateGraduationYear(model);
+            ValidateNationalId(model);
+
             if (!ModelState.IsValid)
             {
                 await PopulateLookupsAsync(model.CountryId, model.GovernorateId);
@@ -311,7 +316,7 @@ namespace HRDS.Web.Areas.HR.Controllers
                                 DocumentNumber = doc.DocumentNumber?.Trim(),
                                 IssueDate = doc.DocumentIssueDate,
                                 ExpiryDate = doc.DocumentExpiryDate,
-                                FilePath = uploadedFilePath,
+                                FilePath = "/" + uploadedFilePath,
                                 IsMandatory = doc.IsDocumentMandatory,
                                 Notes = doc.DocumentNotes?.Trim(),
                                 IsActive = model.IsActive,
@@ -713,12 +718,820 @@ namespace HRDS.Web.Areas.HR.Controllers
             return View(model);
         }
 
+        private void ValidateEmployeeDates(EmployeeViewModel model)
+        {
+            var isArabic =
+                CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ar";
+
+            const int minimumWorkingAge = 18;
+
+            // =========================================================
+            // 1. Date of Birth / Hire Date
+            // =========================================================
+
+            if (model.DateOfBirth.HasValue &&
+                model.HireDate.HasValue)
+            {
+                var birthDate = model.DateOfBirth.Value;
+                var hireDate = model.HireDate.Value;
+
+                // Hire Date cannot be before Date of Birth
+                if (hireDate < birthDate)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ التعيين قبل تاريخ الميلاد."
+                        : "Hire date cannot be earlier than date of birth.";
+
+                    ModelState.AddModelError(
+                        nameof(model.HireDate),
+                        message);
+                }
+
+                // Minimum working age
+                var age = hireDate.Year - birthDate.Year;
+
+                if (birthDate > hireDate.AddYears(-age))
+                {
+                    age--;
+                }
+
+                if (age < minimumWorkingAge)
+                {
+                    var message = isArabic
+                        ? "يجب ألا يقل عمر الموظف عن 18 سنة في تاريخ التعيين."
+                        : "The employee must be at least 18 years old on the hire date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.DateOfBirth),
+                        message);
+                }
+            }
+
+
+            // =========================================================
+            // 2. Hire Date / Termination Date
+            // =========================================================
+
+            if (model.HireDate.HasValue &&
+                model.TerminationDate.HasValue)
+            {
+                var hireDate = model.HireDate.Value;
+                var terminationDate = model.TerminationDate.Value;
+
+                if (terminationDate < hireDate)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ انتهاء الخدمة قبل تاريخ التعيين."
+                        : "Termination date cannot be earlier than hire date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.TerminationDate),
+                        message);
+                }
+            }
+
+
+            // =========================================================
+            // 3. Position
+            // =========================================================
+
+            if (model.PositionFromDate.HasValue)
+            {
+                var fromDate = model.PositionFromDate.Value;
+
+                // Position cannot start before Hire Date
+                if (model.HireDate.HasValue &&
+                    fromDate < model.HireDate.Value)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ بداية الوظيفة قبل تاريخ التعيين."
+                        : "Position start date cannot be earlier than hire date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.PositionFromDate),
+                        message);
+                }
+
+                // Position cannot start after Termination Date
+                if (model.TerminationDate.HasValue &&
+                    fromDate > model.TerminationDate.Value)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ بداية الوظيفة بعد تاريخ انتهاء الخدمة."
+                        : "Position start date cannot be later than termination date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.PositionFromDate),
+                        message);
+                }
+            }
+
+            if (model.PositionFromDate.HasValue &&
+                model.PositionToDate.HasValue)
+            {
+                var fromDate = model.PositionFromDate.Value;
+                var toDate = model.PositionToDate.Value;
+
+                // ToDate cannot be before FromDate
+                if (toDate < fromDate)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ نهاية الوظيفة قبل تاريخ بداية الوظيفة."
+                        : "Position end date cannot be earlier than position start date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.PositionToDate),
+                        message);
+                }
+
+                // ToDate cannot be after Termination Date
+                if (model.TerminationDate.HasValue &&
+                    toDate > model.TerminationDate.Value)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ نهاية الوظيفة بعد تاريخ انتهاء الخدمة."
+                        : "Position end date cannot be later than termination date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.PositionToDate),
+                        message);
+                }
+            }
+
+
+            // =========================================================
+            // 4. Work Schedule
+            // =========================================================
+
+            if (model.ScheduleEffectiveFrom.HasValue)
+            {
+                var fromDate = model.ScheduleEffectiveFrom.Value;
+
+                // Schedule cannot start before Hire Date
+                if (model.HireDate.HasValue &&
+                    fromDate < model.HireDate.Value)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ بداية جدول العمل قبل تاريخ التعيين."
+                        : "Work schedule effective date cannot be earlier than hire date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.ScheduleEffectiveFrom),
+                        message);
+                }
+
+                // Schedule cannot start after Termination Date
+                if (model.TerminationDate.HasValue &&
+                    fromDate > model.TerminationDate.Value)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ بداية جدول العمل بعد تاريخ انتهاء الخدمة."
+                        : "Work schedule effective date cannot be later than termination date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.ScheduleEffectiveFrom),
+                        message);
+                }
+            }
+
+            if (model.ScheduleEffectiveFrom.HasValue &&
+                model.ScheduleEffectiveTo.HasValue)
+            {
+                var fromDate = model.ScheduleEffectiveFrom.Value;
+                var toDate = model.ScheduleEffectiveTo.Value;
+
+                // ToDate cannot be before FromDate
+                if (toDate < fromDate)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ نهاية جدول العمل قبل تاريخ بدايته."
+                        : "Work schedule end date cannot be earlier than its start date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.ScheduleEffectiveTo),
+                        message);
+                }
+
+                // ToDate cannot be after Termination Date
+                if (model.TerminationDate.HasValue &&
+                    toDate > model.TerminationDate.Value)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ نهاية جدول العمل بعد تاريخ انتهاء الخدمة."
+                        : "Work schedule end date cannot be later than termination date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.ScheduleEffectiveTo),
+                        message);
+                }
+            }
+
+
+            // =========================================================
+            // 5. Probation Period
+            // =========================================================
+
+            if (model.ProbationStartDate.HasValue)
+            {
+                var startDate = model.ProbationStartDate.Value;
+
+                // Probation cannot start before Hire Date
+                if (model.HireDate.HasValue &&
+                    startDate < model.HireDate.Value)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن تبدأ فترة الاختبار قبل تاريخ التعيين."
+                        : "Probation cannot start before the hire date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.ProbationStartDate),
+                        message);
+                }
+
+                // Probation cannot start after Termination Date
+                if (model.TerminationDate.HasValue &&
+                    startDate > model.TerminationDate.Value)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن تبدأ فترة الاختبار بعد تاريخ انتهاء الخدمة."
+                        : "Probation cannot start after the termination date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.ProbationStartDate),
+                        message);
+                }
+            }
+
+            if (model.ProbationStartDate.HasValue &&
+                model.ProbationEndDate.HasValue)
+            {
+                var startDate = model.ProbationStartDate.Value;
+                var endDate = model.ProbationEndDate.Value;
+
+                // End Date cannot be before Start Date
+                if (endDate < startDate)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ انتهاء فترة الاختبار قبل تاريخ بدايتها."
+                        : "Probation end date cannot be earlier than probation start date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.ProbationEndDate),
+                        message);
+                }
+
+                // End Date cannot be after Termination Date
+                if (model.TerminationDate.HasValue &&
+                    endDate > model.TerminationDate.Value)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ انتهاء فترة الاختبار بعد تاريخ انتهاء الخدمة."
+                        : "Probation end date cannot be later than termination date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.ProbationEndDate),
+                        message);
+                }
+            }
+
+
+            // =========================================================
+            // 6. Confirmation Date
+            // =========================================================
+
+            if (model.ProbationConfirmationDate.HasValue)
+            {
+                var confirmationDate = model.ProbationConfirmationDate.Value;
+
+                // Confirmation cannot be before Hire Date
+                if (model.HireDate.HasValue &&
+                    confirmationDate < model.HireDate.Value)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ التثبيت قبل تاريخ التعيين."
+                        : "Confirmation date cannot be earlier than hire date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.ProbationConfirmationDate),
+                        message);
+                }
+
+                // Confirmation cannot be before Probation Start
+                if (model.ProbationStartDate.HasValue &&
+                    confirmationDate < model.ProbationStartDate.Value)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ التثبيت قبل تاريخ بداية فترة الاختبار."
+                        : "Confirmation date cannot be earlier than probation start date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.ProbationConfirmationDate),
+                        message);
+                }
+
+                // Confirmation cannot be after Probation End
+                if (model.ProbationEndDate.HasValue &&
+                    confirmationDate > model.ProbationEndDate.Value)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ التثبيت بعد تاريخ انتهاء فترة الاختبار."
+                        : "Confirmation date cannot be later than probation end date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.ProbationConfirmationDate),
+                        message);
+                }
+
+                // Confirmation cannot be after Termination
+                if (model.TerminationDate.HasValue &&
+                    confirmationDate > model.TerminationDate.Value)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ التثبيت بعد تاريخ انتهاء الخدمة."
+                        : "Confirmation date cannot be later than termination date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.ProbationConfirmationDate),
+                        message);
+                }
+            }
+
+
+            // =========================================================
+            // 7. Salary
+            // =========================================================
+
+            if (model.SalaryFromDate.HasValue)
+            {
+                var fromDate = model.SalaryFromDate.Value;
+
+                // Salary cannot start before Hire Date
+                if (model.HireDate.HasValue &&
+                    fromDate < model.HireDate.Value)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ بداية الراتب قبل تاريخ التعيين."
+                        : "Salary start date cannot be earlier than hire date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.SalaryFromDate),
+                        message);
+                }
+
+                // Salary cannot start after Termination Date
+                if (model.TerminationDate.HasValue &&
+                    fromDate > model.TerminationDate.Value)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ بداية الراتب بعد تاريخ انتهاء الخدمة."
+                        : "Salary start date cannot be later than termination date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.SalaryFromDate),
+                        message);
+                }
+            }
+
+            if (model.SalaryFromDate.HasValue &&
+                model.SalaryToDate.HasValue)
+            {
+                var fromDate = model.SalaryFromDate.Value;
+                var toDate = model.SalaryToDate.Value;
+
+                // ToDate cannot be before FromDate
+                if (toDate < fromDate)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ نهاية الراتب قبل تاريخ بداية الراتب."
+                        : "Salary end date cannot be earlier than salary start date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.SalaryToDate),
+                        message);
+                }
+
+                // ToDate cannot be after Termination Date
+                if (model.TerminationDate.HasValue &&
+                    toDate > model.TerminationDate.Value)
+                {
+                    var message = isArabic
+                        ? "لا يمكن أن يكون تاريخ نهاية الراتب بعد تاريخ انتهاء الخدمة."
+                        : "Salary end date cannot be later than termination date.";
+
+                    ModelState.AddModelError(
+                        nameof(model.SalaryToDate),
+                        message);
+                }
+            }
+
+
+            // =========================================================
+            // 8. Allowances
+            // =========================================================
+
+            if (model.Allowances != null)
+            {
+                foreach (var item in model.Allowances)
+                {
+                    if (item.FromDate.HasValue)
+                    {
+                        var fromDate = item.FromDate.Value;
+
+                        // Allowance cannot start before Hire Date
+                        if (model.HireDate.HasValue &&
+                            fromDate < model.HireDate.Value)
+                        {
+                            var message = isArabic
+                                ? "لا يمكن أن يكون تاريخ بداية البدل قبل تاريخ التعيين."
+                                : "Allowance start date cannot be earlier than hire date.";
+
+                            ModelState.AddModelError(
+                                nameof(model.Allowances),
+                                message);
+                        }
+
+                        // Allowance cannot start after Termination Date
+                        if (model.TerminationDate.HasValue &&
+                            fromDate > model.TerminationDate.Value)
+                        {
+                            var message = isArabic
+                                ? "لا يمكن أن يكون تاريخ بداية البدل بعد تاريخ انتهاء الخدمة."
+                                : "Allowance start date cannot be later than termination date.";
+
+                            ModelState.AddModelError(
+                                nameof(model.Allowances),
+                                message);
+                        }
+                    }
+
+                    if (item.FromDate.HasValue &&
+                        item.ToDate.HasValue)
+                    {
+                        var fromDate = item.FromDate.Value;
+                        var toDate = item.ToDate.Value;
+
+                        // ToDate cannot be before FromDate
+                        if (toDate < fromDate)
+                        {
+                            var message = isArabic
+                                ? "لا يمكن أن يكون تاريخ نهاية البدل قبل تاريخ بدايته."
+                                : "Allowance end date cannot be earlier than allowance start date.";
+
+                            ModelState.AddModelError(
+                                nameof(model.Allowances),
+                                message);
+                        }
+
+                        // ToDate cannot be after Termination Date
+                        if (model.TerminationDate.HasValue &&
+                            toDate > model.TerminationDate.Value)
+                        {
+                            var message = isArabic
+                                ? "لا يمكن أن يكون تاريخ نهاية البدل بعد تاريخ انتهاء الخدمة."
+                                : "Allowance end date cannot be later than termination date.";
+
+                            ModelState.AddModelError(
+                                nameof(model.Allowances),
+                                message);
+                        }
+                    }
+                }
+            }
+
+
+            // =========================================================
+            // 9. Deductions
+            // =========================================================
+
+            if (model.Deductions != null)
+            {
+                foreach (var item in model.Deductions)
+                {
+                    if (item.FromDate.HasValue)
+                    {
+                        var fromDate = item.FromDate.Value;
+
+                        // Deduction cannot start before Hire Date
+                        if (model.HireDate.HasValue &&
+                            fromDate < model.HireDate.Value)
+                        {
+                            var message = isArabic
+                                ? "لا يمكن أن يكون تاريخ بداية الخصم قبل تاريخ التعيين."
+                                : "Deduction start date cannot be earlier than hire date.";
+
+                            ModelState.AddModelError(
+                                nameof(model.Deductions),
+                                message);
+                        }
+
+                        // Deduction cannot start after Termination Date
+                        if (model.TerminationDate.HasValue &&
+                            fromDate > model.TerminationDate.Value)
+                        {
+                            var message = isArabic
+                                ? "لا يمكن أن يكون تاريخ بداية الخصم بعد تاريخ انتهاء الخدمة."
+                                : "Deduction start date cannot be later than termination date.";
+
+                            ModelState.AddModelError(
+                                nameof(model.Deductions),
+                                message);
+                        }
+                    }
+
+                    if (item.FromDate.HasValue &&
+                        item.ToDate.HasValue)
+                    {
+                        var fromDate = item.FromDate.Value;
+                        var toDate = item.ToDate.Value;
+
+                        // ToDate cannot be before FromDate
+                        if (toDate < fromDate)
+                        {
+                            var message = isArabic
+                                ? "لا يمكن أن يكون تاريخ نهاية الخصم قبل تاريخ بدايته."
+                                : "Deduction end date cannot be earlier than deduction start date.";
+
+                            ModelState.AddModelError(
+                                nameof(model.Deductions),
+                                message);
+                        }
+
+                        // ToDate cannot be after Termination Date
+                        if (model.TerminationDate.HasValue &&
+                            toDate > model.TerminationDate.Value)
+                        {
+                            var message = isArabic
+                                ? "لا يمكن أن يكون تاريخ نهاية الخصم بعد تاريخ انتهاء الخدمة."
+                                : "Deduction end date cannot be later than termination date.";
+
+                            ModelState.AddModelError(
+                                nameof(model.Deductions),
+                                message);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void ValidateGraduationYear(EmployeeViewModel model)
+        {
+            var isArabic =
+                CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ar";
+
+            if (!model.GraduationYear.HasValue)
+                return;
+
+            var graduationYear = model.GraduationYear.Value;
+            var currentYear = DateTime.Today.Year;
+
+            // لا يمكن أن تكون سنة التخرج في المستقبل
+            if (graduationYear > currentYear)
+            {
+                var message = isArabic
+                    ? "لا يمكن أن تكون سنة التخرج أكبر من السنة الحالية."
+                    : "Graduation year cannot be greater than the current year.";
+
+                ModelState.AddModelError(
+                    nameof(model.GraduationYear),
+                    message);
+            }
+
+            // لا يمكن أن تكون سنة التخرج قبل سنة الميلاد
+            if (model.DateOfBirth.HasValue &&
+                graduationYear < model.DateOfBirth.Value.Year)
+            {
+                var message = isArabic
+                    ? "لا يمكن أن تكون سنة التخرج قبل سنة الميلاد."
+                    : "Graduation year cannot be earlier than the year of birth.";
+
+                ModelState.AddModelError(
+                    nameof(model.GraduationYear),
+                    message);
+            }
+
+            // التحقق من العمر وقت التخرج
+            if (model.DateOfBirth.HasValue)
+            {
+                var ageAtGraduation =
+                    graduationYear - model.DateOfBirth.Value.Year;
+
+                if (ageAtGraduation < 18)
+                {
+                    var message = isArabic
+                        ? "يجب ألا يكون عمر الموظف أقل من 18 سنة في سنة التخرج."
+                        : "The employee must be at least 18 years old in the graduation year.";
+
+                    ModelState.AddModelError(
+                        nameof(model.GraduationYear),
+                        message);
+                }
+            }
+        }
+
+        private bool IsValidEgyptianGovernorateCode(int code)
+        {
+            return code switch
+            {
+                01 => true, // القاهرة
+                02 => true, // الإسكندرية
+                03 => true, // بورسعيد
+                04 => true, // السويس
+                11 => true, // دمياط
+                12 => true, // الدقهلية
+                13 => true, // الشرقية
+                14 => true, // القليوبية
+                15 => true, // كفر الشيخ
+                16 => true, // الغربية
+                17 => true, // المنوفية
+                18 => true, // البحيرة
+                19 => true, // الإسماعيلية
+                21 => true, // الجيزة
+                22 => true, // بني سويف
+                23 => true, // الفيوم
+                24 => true, // المنيا
+                25 => true, // أسيوط
+                26 => true, // سوهاج
+                27 => true, // قنا
+                28 => true, // أسوان
+                29 => true, // الأقصر
+                31 => true, // البحر الأحمر
+                32 => true, // الوادي الجديد
+                33 => true, // مطروح
+                34 => true, // شمال سيناء
+                35 => true, // جنوب سيناء
+                88 => true, // خارج الجمهورية
+                _ => false
+            };
+        }
+
+        private bool ValidateEgyptianNationalIdChecksum(string nationalId)
+        {
+            if (nationalId.Length != 14)
+                return false;
+
+            int sum = 0;
+
+            for (int i = 0; i < 13; i++)
+            {
+                int digit = nationalId[i] - '0';
+
+                int weight = i % 2 == 0 ? 1 : 2;
+
+                int value = digit * weight;
+
+                sum += (value / 10) + (value % 10);
+            }
+
+            int checkDigit = (10 - (sum % 10)) % 10;
+
+            return checkDigit == (nationalId[13] - '0');
+        }
+
+        private void ValidateNationalId(EmployeeViewModel model)
+        {
+            var isArabic = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ar";
+
+            if (string.IsNullOrWhiteSpace(model.NationalIdNo))
+                return;
+
+            var nationalId = model.NationalIdNo.Trim();
+
+            // =========================================================
+            // 1. Length & Digits
+            // =========================================================
+
+            if (!Regex.IsMatch(nationalId, @"^\d{14}$"))
+            {
+                var message = isArabic
+                    ? "الرقم القومي يجب أن يتكون من 14 رقمًا."
+                    : "National ID must contain exactly 14 digits.";
+
+                ModelState.AddModelError(nameof(model.NationalIdNo), message);
+
+                return;
+            }
+
+
+            // =========================================================
+            // 2. Century
+            // =========================================================
+
+            if (nationalId[0] != '2' && nationalId[0] != '3')
+            {
+                var message = isArabic
+                    ? "الرقم القومي غير صحيح."
+                    : "Invalid national ID.";
+
+                ModelState.AddModelError(nameof(model.NationalIdNo), message);
+
+                return;
+            }
+
+
+            // =========================================================
+            // 3. Governorate Code
+            // =========================================================
+
+            var governorateCode =
+                int.Parse(nationalId.Substring(7, 2));
+
+            if (!IsValidEgyptianGovernorateCode(governorateCode))
+            {
+                var message = isArabic
+                    ? "كود المحافظة في الرقم القومي غير صحيح."
+                    : "Invalid governorate code in national ID.";
+
+                ModelState.AddModelError(nameof(model.NationalIdNo), message);
+            }
+
+
+            // =========================================================
+            // 4. Date of Birth inside National ID
+            // =========================================================
+
+            var century = nationalId[0] == '2' ? 1900 : 2000;
+
+            var year = century + int.Parse(nationalId.Substring(1, 2));
+
+            var month = int.Parse(nationalId.Substring(3, 2));
+
+            var day = int.Parse(nationalId.Substring(5, 2));
+
+            DateOnly nationalIdBirthDate;
+
+            try
+            {
+                nationalIdBirthDate = new DateOnly(year, month, day);
+            }
+            catch
+            {
+                var message = isArabic
+                    ? "تاريخ الميلاد الموجود في الرقم القومي غير صحيح."
+                    : "The date of birth contained in the national ID is invalid.";
+
+                ModelState.AddModelError(nameof(model.NationalIdNo), message);
+
+                return;
+            }
+
+
+            // =========================================================
+            // 5. Compare with Employee Date of Birth
+            // =========================================================
+
+            if (model.DateOfBirth.HasValue)
+            {
+                var employeeBirthDate = model.DateOfBirth.Value;
+
+                if (nationalIdBirthDate != employeeBirthDate)
+                {
+                    var message = isArabic
+                        ? "تاريخ الميلاد في الرقم القومي لا يطابق تاريخ ميلاد الموظف."
+                        : "The date of birth in the national ID does not match the employee's date of birth.";
+
+                    ModelState.AddModelError(nameof(model.NationalIdNo), message);
+                }
+            }
+
+
+            // =========================================================
+            // 6. National ID Birth Date cannot be in the future
+            // =========================================================
+
+            if (nationalIdBirthDate > DateOnly.FromDateTime(DateTime.Today))
+            {
+                var message = isArabic
+                    ? "تاريخ الميلاد الموجود في الرقم القومي لا يمكن أن يكون في المستقبل."
+                    : "The date of birth in the national ID cannot be in the future.";
+
+                ModelState.AddModelError(nameof(model.NationalIdNo), message);
+            }
+
+
+            // =========================================================
+            // 7. Checksum
+            // =========================================================
+
+            if (!ValidateEgyptianNationalIdChecksum(nationalId))
+            {
+                var message = isArabic
+                    ? "الرقم القومي غير صحيح."
+                    : "Invalid national ID.";
+
+                ModelState.AddModelError(nameof(model.NationalIdNo), message);
+            }
+        }
+
         // POST: HR/Employees/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, EmployeeViewModel model)
         {
             if (id != model.EmployeeId) return NotFound();
+
+            ValidateEmployeeDates(model);
+            ValidateGraduationYear(model);
+            ValidateNationalId(model);
 
             if (!ModelState.IsValid)
             {
@@ -972,7 +1785,7 @@ namespace HRDS.Web.Areas.HR.Controllers
                                     DocumentNumber = doc.DocumentNumber?.Trim(),
                                     IssueDate = doc.DocumentIssueDate,
                                     ExpiryDate = doc.DocumentExpiryDate,
-                                    FilePath = uploadedFilePath,
+                                    FilePath = "/" + uploadedFilePath,
                                     IsMandatory = doc.IsDocumentMandatory,
                                     Notes = doc.DocumentNotes?.Trim(),
                                     IsActive = model.IsActive,
@@ -1123,13 +1936,18 @@ namespace HRDS.Web.Areas.HR.Controllers
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
 
-                    TempData["SuccessMessage"] = "تم تحديث بيانات الموظف بنجاح";
+                    TempData["SuccessMessage"] = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ar"
+                        ? "تم تحديث بيانات الموظف بنجاح" : "Employee data has been updated successfully.";
+
                     return RedirectToAction(nameof(Index));
                 }
                 catch (Exception ex)
                 {
                     await transaction.RollbackAsync();
-                    ModelState.AddModelError("", "حدث خطأ أثناء حفظ البيانات: " + ex.Message);
+                    var message = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ar" ?
+                        "حدث خطأ أثناء حفظ البيانات: " : "An error occurred while saving the data: ";
+
+                    ModelState.AddModelError("", message + ex.Message);
                 }
             }
 

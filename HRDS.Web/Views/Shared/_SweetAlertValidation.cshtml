@@ -1,0 +1,40 @@
+﻿@using System.Text.Json
+
+@{
+    var errors = ViewData.ModelState
+        .Values
+        .SelectMany(v => v.Errors)
+        .Where(e => !string.IsNullOrWhiteSpace(e.ErrorMessage))
+        .Select(e => e.ErrorMessage)
+        .Distinct()
+        .ToList();
+}
+
+@if (errors.Any())
+{
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const errors = @Html.Raw(
+                            JsonSerializer.Serialize(errors)
+                    );
+
+        if (errors.length > 0) {
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'خطأ في البيانات',
+                    html: errors.join('<br><br>'),
+                    confirmButtonText: 'حسنًا',
+                    confirmButtonColor: '#d33',
+                    width: '500px',
+                    customClass: {
+                        popup: 'hrds-alert-popup'
+                    }
+                });
+
+            }
+
+        });
+    </script>
+}

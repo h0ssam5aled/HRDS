@@ -355,11 +355,11 @@
                             <!-- Hire Date & Employment Type -->
                             <div class="col-md-6 text-start">
                                 <label asp-for="HireDate" class="form-label form-label-dark">@(isArabic ? "تاريخ التعيين" : "Hire Date")<span class="text-danger">*</span></label>
-                                <input asp-for="HireDate" type="date" class="form-control form-control-dark" />
+                                <input asp-for="HireDate" type="date" class="form-control form-control-dark" required />
                             </div>
                             <div class="col-md-6 text-start">
                                 <label asp-for="EmploymentTypeId" class="form-label form-label-dark">@(isArabic ? "نوع التوظيف" : "Employment Type")<span class="text-danger">*</span></label>
-                                <select asp-for="EmploymentTypeId" class="form-select form-select-dark" asp-items="ViewBag.EmploymentTypes">
+                                <select asp-for="EmploymentTypeId" class="form-select form-select-dark" asp-items="ViewBag.EmploymentTypes" required>
                                     <option value="">@(isArabic ? "-- اختر نوع التوظيف --" : "-- Select Employment Type --")</option>
                                 </select>
                             </div>
@@ -367,13 +367,13 @@
                             <!-- Department & Job Title -->
                             <div class="col-md-6 text-start">
                                 <label asp-for="DepartmentId" class="form-label form-label-dark">@(isArabic ? "الإدارة" : "Department")<span class="text-danger">*</span></label>
-                                <select asp-for="DepartmentId" class="form-select form-select-dark" asp-items="ViewBag.Departments">
+                                <select asp-for="DepartmentId" class="form-select form-select-dark" asp-items="ViewBag.Departments" required>
                                     <option value="">@(isArabic ? "-- اختر الإدارة --" : "-- Select Department --")</option>
                                 </select>
                             </div>
                             <div class="col-md-6 text-start">
                                 <label asp-for="JobTitleId" class="form-label form-label-dark">@(isArabic ? "المسمى الوظيفي" : "Job Title")<span class="text-danger">*</span></label>
-                                <select asp-for="JobTitleId" class="form-select form-select-dark" asp-items="ViewBag.JobTitles">
+                                <select asp-for="JobTitleId" class="form-select form-select-dark" asp-items="ViewBag.JobTitles" required>
                                     <option value="">@(isArabic ? "-- اختر المسمى الوظيفي --" : "-- Select Job Title --")</option>
                                 </select>
                             </div>
@@ -387,7 +387,7 @@
                             </div>
                             <div class="col-md-6 text-start">
                                 <label asp-for="EmployeeStatusId" class="form-label form-label-dark">@(isArabic ? "حالة الموظف" : "Employee Status")<span class="text-danger">*</span></label>
-                                <select asp-for="EmployeeStatusId" class="form-select form-select-dark" asp-items="ViewBag.EmployeeStatuses">
+                                <select asp-for="EmployeeStatusId" class="form-select form-select-dark" asp-items="ViewBag.EmployeeStatuses" required>
                                     <option value="">@(isArabic ? "-- اختر الحالة --" : "-- Select Status --")</option>
                                 </select>
                             </div>
@@ -408,7 +408,7 @@
                             <!-- Position & Assignment Reason -->
                             <div class="col-md-6 text-start">
                                 <label asp-for="PositionId" class="form-label form-label-dark">@(isArabic ? "المنصب الوظيفي" : "Position")<span class="text-danger">*</span></label>
-                                <select asp-for="PositionId" class="form-select form-select-dark" asp-items="ViewBag.Positions">
+                                <select asp-for="PositionId" class="form-select form-select-dark" asp-items="ViewBag.Positions" required>
                                     <option value="">@(isArabic ? "-- اختر المنصب --" : "-- Select Position --")</option>
                                 </select>
                             </div>
@@ -422,7 +422,7 @@
                             <!-- Dates (From & To) -->
                             <div class="col-md-6 text-start">
                                 <label asp-for="PositionFromDate" class="form-label form-label-dark">@(isArabic ? "من تاريخ" : "From Date")<span class="text-danger">*</span></label>
-                                <input asp-for="PositionFromDate" type="date" class="form-control form-control-dark" />
+                                <input asp-for="PositionFromDate" type="date" class="form-control form-control-dark" required />
                             </div>
                             <div class="col-md-6 text-start">
                                 <label asp-for="PositionToDate" class="form-label form-label-dark">@(isArabic ? "إلى تاريخ" : "To Date")</label>
@@ -447,7 +447,7 @@
                             <!-- Qualification & Institution -->
                             <div class="col-md-6 text-start">
                                 <label asp-for="QualificationId" class="form-label form-label-dark">@(isArabic ? "المؤهل العلمي" : "Qualification")<span class="text-danger">*</span></label>
-                                <select asp-for="QualificationId" class="form-select form-select-dark" asp-items="ViewBag.Qualifications">
+                                <select asp-for="QualificationId" class="form-select form-select-dark" asp-items="ViewBag.Qualifications" required>
                                     <option value="">@(isArabic ? "-- اختر المؤهل العلمي --" : "-- Select Qualification --")</option>
                                 </select>
                             </div>
@@ -552,7 +552,7 @@
                             <!-- Schedule Type -->
                             <div class="col-md-4 text-start">
                                 <label asp-for="ScheduleType" class="form-label form-label-dark">@(isArabic ? "نوع الجدول" : "Schedule Type")<span class="text-danger">*</span></label>
-                                <select asp-for="ScheduleType" class="form-select form-select-dark">
+                                <select asp-for="ScheduleType" class="form-select form-select-dark" required>
                                     <option value="1">@(isArabic ? "وردية ثابتة (Fixed Shift)" : "Fixed Shift")</option>
                                     <option value="2">@(isArabic ? "نمط / وردية متغيره (Pattern / Rotation)" : "Shift Pattern")</option>
                                 </select>
@@ -561,7 +561,7 @@
                             <!-- Shift -->
                             <div class="col-md-4 text-start">
                                 <label asp-for="ShiftId" class="form-label form-label-dark">@(isArabic ? "الوردية" : "Shift")</label>
-                                <select asp-for="ShiftId" class="form-select form-select-dark" asp-items="ViewBag.Shifts">
+                                <select asp-for="ShiftId" class="form-select form-select-dark" asp-items="ViewBag.Shifts" required>
                                     <option value="">@(isArabic ? "-- اختر الوردية --" : "-- Select Shift --")</option>
                                 </select>
                             </div>
@@ -577,7 +577,7 @@
                             <!-- Effective From & To -->
                             <div class="col-md-6 text-start">
                                 <label asp-for="ScheduleEffectiveFrom" class="form-label form-label-dark">@(isArabic ? "تاريخ السريان من" : "Effective From")<span class="text-danger">*</span></label>
-                                <input asp-for="ScheduleEffectiveFrom" type="date" class="form-control form-control-dark" />
+                                <input asp-for="ScheduleEffectiveFrom" type="date" class="form-control form-control-dark" required />
                             </div>
                             <div class="col-md-6 text-start">
                                 <label asp-for="ScheduleEffectiveTo" class="form-label form-label-dark">@(isArabic ? "تاريخ السريان إلى" : "Effective To")</label>
@@ -711,12 +711,12 @@
                             <!-- Basic Salary & Net Salary -->
                             <div class="col-md-4 text-start">
                                 <label asp-for="BasicSalary" class="form-label form-label-dark">@(isArabic ? "الراتب الأساسي" : "Basic Salary")<span class="text-danger">*</span></label>
-                                <input asp-for="BasicSalary" type="number" step="0.01" class="form-control form-control-dark" placeholder="0.00" />
+                                <input asp-for="BasicSalary" type="number" step="0.0001" class="form-control form-control-dark" placeholder="0.00" required />
                                 <span asp-validation-for="BasicSalary" class="text-danger small"></span>
                             </div>
                             <div class="col-md-4 text-start">
                                 <label asp-for="NetSalary" class="form-label form-label-dark">@(isArabic ? "الراتب الصافي" : "Net Salary")<span class="text-danger">*</span></label>
-                                <input asp-for="NetSalary" type="number" step="0.01" class="form-control form-control-dark" placeholder="0.00" />
+                                <input asp-for="NetSalary" type="number" step="0.0001" class="form-control form-control-dark" placeholder="0.00" required />
                                 <span asp-validation-for="NetSalary" class="text-danger small"></span>
                             </div>
                             <div class="col-md-4 text-start">
@@ -729,7 +729,7 @@
                             <!-- From Date & To Date -->
                             <div class="col-md-6 text-start">
                                 <label asp-for="SalaryFromDate" class="form-label form-label-dark">@(isArabic ? "من تاريخ" : "From Date")<span class="text-danger">*</span></label>
-                                <input asp-for="SalaryFromDate" type="date" class="form-control form-control-dark" />
+                                <input asp-for="SalaryFromDate" type="date" class="form-control form-control-dark" required />
                             </div>
                             <div class="col-md-6 text-start">
                                 <label asp-for="SalaryToDate" class="form-label form-label-dark">@(isArabic ? "إلى تاريخ" : "To Date")</label>
@@ -773,7 +773,7 @@
                                         </div>
                                         <div class="col-md-4 text-start">
                                             <label class="form-label form-label-dark">@(isArabic ? "المبلغ" : "Amount")</label>
-                                            <input name="Allowances[0].Amount" type="number" step="0.01" class="form-control form-control-dark" placeholder="0.00" />
+                                            <input name="Allowances[0].Amount" type="number" step="0.0001" class="form-control form-control-dark" placeholder="0.00" />
                                         </div>
                                         <div class="col-md-2 text-start">
                                             <label class="form-label form-label-dark">@(isArabic ? "من تاريخ" : "From Date")</label>
@@ -819,7 +819,7 @@
                                         </div>
                                         <div class="col-md-4 text-start">
                                             <label class="form-label form-label-dark">@(isArabic ? "المبلغ" : "Amount")</label>
-                                            <input name="Deductions[0].Amount" type="number" step="0.01" class="form-control form-control-dark" placeholder="0.00" />
+                                            <input name="Deductions[0].Amount" type="number" step="0.0001" class="form-control form-control-dark" placeholder="0.00" />
                                         </div>
                                         <div class="col-md-2 text-start">
                                             <label class="form-label form-label-dark">@(isArabic ? "من تاريخ" : "From Date")</label>
@@ -1028,7 +1028,7 @@
                         </div>
                         <div class="col-md-4 text-start">
                             <label class="form-label form-label-dark">@(isArabic ? "المبلغ" : "Amount")</label>
-                            <input name="Allowances[${allowanceIndex}].Amount" type="number" step="0.01" class="form-control form-control-dark" placeholder="0.00" />
+                            <input name="Allowances[${allowanceIndex}].Amount" type="number" step="0.0001" class="form-control form-control-dark" placeholder="0.00" />
                         </div>
                         <div class="col-md-2 text-start">
                             <label class="form-label form-label-dark">@(isArabic ? "من تاريخ" : "From Date")</label>
@@ -1088,7 +1088,7 @@
                         </div>
                         <div class="col-md-4 text-start">
                             <label class="form-label form-label-dark">@(isArabic ? "المبلغ" : "Amount")</label>
-                            <input name="Deductions[${deductionIndex}].Amount" type="number" step="0.01" class="form-control form-control-dark" placeholder="0.00" />
+                            <input name="Deductions[${deductionIndex}].Amount" type="number" step="0.0001" class="form-control form-control-dark" placeholder="0.00" />
                         </div>
                         <div class="col-md-2 text-start">
                             <label class="form-label form-label-dark">@(isArabic ? "من تاريخ" : "From Date")</label>

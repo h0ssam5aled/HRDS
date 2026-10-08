@@ -1,0 +1,80 @@
+﻿@using System.Text.Json
+
+@{
+    var successMessage = TempData["SuccessMessage"]?.ToString();
+    var errorMessage = TempData["ErrorMessage"]?.ToString();
+    var warningMessage = TempData["WarningMessage"]?.ToString();
+    var infoMessage = TempData["InfoMessage"]?.ToString();
+}
+
+@if (!string.IsNullOrWhiteSpace(successMessage) ||
+     !string.IsNullOrWhiteSpace(errorMessage) ||
+     !string.IsNullOrWhiteSpace(warningMessage) ||
+     !string.IsNullOrWhiteSpace(infoMessage))
+{
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const successMessage = @Html.Raw(
+                            JsonSerializer.Serialize(successMessage)
+                    );
+
+        const errorMessage = @Html.Raw(
+                        JsonSerializer.Serialize(errorMessage)
+                );
+
+        const warningMessage = @Html.Raw(
+                        JsonSerializer.Serialize(warningMessage)
+                );
+
+        const infoMessage = @Html.Raw(
+                        JsonSerializer.Serialize(infoMessage)
+                );
+
+        if (successMessage) {
+
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: successMessage,
+                    showConfirmButton: false,
+                    timer: 3500,
+                    timerProgressBar: true
+                });
+
+            }
+            else if (errorMessage) {
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'حدث خطأ',
+                    text: errorMessage,
+                    confirmButtonText: 'حسنًا'
+                });
+
+            }
+            else if (warningMessage) {
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'تنبيه',
+                    text: warningMessage,
+                    confirmButtonText: 'حسنًا'
+                });
+
+            }
+            else if (infoMessage) {
+
+                Swal.fire({
+                    icon: 'info',
+                    title: 'معلومة',
+                    text: infoMessage,
+                    confirmButtonText: 'حسنًا'
+                });
+
+            }
+
+        });
+    </script>
+}

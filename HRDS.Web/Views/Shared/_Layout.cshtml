@@ -43,6 +43,7 @@
     <link href="~/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link href="~/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
 </head>
 
 <body>
@@ -63,11 +64,11 @@
                 </a>
             </div>
 
-            <!-- Search Bar -->
+            @* <!-- Search Bar -->
             <div class="erp-search-box d-none d-md-block">
                 <i class="bi bi-search search-icon"></i>
                 <input type="text" placeholder="@(isAr ? "بحث سريع في أجزاء النظام..." : "Quick search in system...")">
-            </div>
+            </div> *@
 
             <!-- Left/Right Side (Branch, Profile, Notifications) -->
             <div class="d-flex align-items-center gap-3">
@@ -167,6 +168,12 @@
     <!-- 3. DataTables JS -->
     <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+
+    <script src="~/sweetalert2/sweetalert2.all.min.js"></script>
+
+    <partial name="_SweetAlertMessages" />
+    <partial name="_SweetAlertValidation" />
+
 
     <!-- 4. Section Scripts (لعملية تحميل السكريبتات الخاصة بالشاشات الفرعية) -->
     @await RenderSectionAsync("Scripts", required: false)

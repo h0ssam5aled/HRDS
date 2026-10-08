@@ -17,6 +17,10 @@
     {
       "library": "datatables@2.3.7",
       "destination": "wwwroot/datatables/"
+    },
+    {
+      "library": "sweetalert2@11.26.25",
+      "destination": "wwwroot/sweetalert2/"
     }
   ]
 }
