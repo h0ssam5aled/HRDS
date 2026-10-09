@@ -37,7 +37,7 @@
 <div class="container-fluid py-3" dir="@currentDir">
     <form asp-action="Edit" method="post" enctype="multipart/form-data">
         @Html.AntiForgeryToken()
-        
+
         <!-- Primary Key Hidden Field -->
         <input type="hidden" asp-for="EmployeeId" />
 
@@ -360,7 +360,7 @@
 
                             <div class="col-md-6 text-start">
                                 <label asp-for="JobLevelId" class="form-label form-label-dark">@(isArabic ? "المستوى الوظيفي" : "Job Level")</label>
-                                <select asp-for="JobLevelId" class="form-select form-select-dark" asp-items="ViewBag.JobLevels" >
+                                <select asp-for="JobLevelId" class="form-select form-select-dark" asp-items="ViewBag.JobLevels">
                                     <option value="">@(isArabic ? "-- اختر المستوى الوظيفي --" : "-- Select Job Level --")</option>
                                 </select>
                             </div>
@@ -586,8 +586,16 @@
                                             <div class="row g-3">
                                                 <div class="col-md-6 text-start">
                                                     <label class="form-label form-label-dark">@(isArabic ? "نوع المستند" : "Document Type")</label>
-                                                    <select name="Documents[@i].DocumentTypeId" class="form-select form-select-dark" asp-items="ViewBag.DocumentTypes">
+                                                    <select name="Documents[@i].DocumentTypeId" class="form-select form-select-dark">
                                                         <option value="">@(isArabic ? "-- اختر نوع المستند --" : "-- Select Document Type --")</option>
+                                                        @if (ViewBag.DocumentTypes != null)
+                                                        {
+                                                            foreach (var item in (IEnumerable<SelectListItem>)ViewBag.DocumentTypes)
+                                                            {
+                                                                bool isSelected = item.Value == Model.Documents[i].DocumentTypeId.ToString();
+                                                                <option value="@item.Value" selected="@isSelected">@item.Text</option>
+                                                            }
+                                                        }
                                                     </select>
                                                 </div>
                                                 <div class="col-md-6 text-start">
@@ -737,9 +745,6 @@
                                             <div class="row g-3">
                                                 <div class="col-md-4 text-start">
                                                     <label class="form-label form-label-dark">@(isArabic ? "نوع البدل" : "Allowance Type")</label>
-                                                  @*   <select name="Allowances[@i].AllowanceTypeId" class="form-select form-select-dark" asp-items="ViewBag.AllowanceTypes">
-                                                        <option value="">@(isArabic ? "-- اختر نوع البدل --" : "-- Select Allowance --")</option>
-                                                    </select> *@
                                                     <select name="Allowances[@i].AllowanceTypeId" class="form-select form-select-dark">
                                                         <option value="">@(isArabic ? "-- اختر نوع البدل --" : "-- Select Allowance --")</option>
                                                         @if (ViewBag.AllowanceTypes != null)
@@ -754,7 +759,11 @@
                                                 </div>
                                                 <div class="col-md-4 text-start">
                                                     <label class="form-label form-label-dark">@(isArabic ? "المبلغ" : "Amount")</label>
-                                                    <input name="Allowances[@i].Amount" value="@Model.Allowances[i].Amount" type="number" step="0.0001" class="form-control form-control-dark" />
+                                                    <input name="Allowances[@i].Amount"
+                                                           value="@(Model.Allowances[i].Amount?.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+                                                           type="number"
+                                                           step="0.0001"
+                                                           class="form-control form-control-dark" />
                                                 </div>
                                                 <div class="col-md-2 text-start">
                                                     <label class="form-label form-label-dark">@(isArabic ? "من تاريخ" : "From Date")</label>
@@ -801,10 +810,6 @@
                                             <div class="row g-3">
                                                 <div class="col-md-4 text-start">
                                                     <label class="form-label form-label-dark">@(isArabic ? "نوع الاستقطاع" : "Deduction Type")</label>
-                                                   @*  <select name="Deductions[@i].DeductionTypeId" class="form-select form-select-dark" asp-items="ViewBag.DeductionTypes">
-                                                        <option value="">@(isArabic ? "-- اختر نوع الاستقطاع --" : "-- Select Deduction --")</option>
-                                                    </select> *@
-
                                                     <select name="Deductions[@i].DeductionTypeId" class="form-select form-select-dark">
                                                         <option value="">@(isArabic ? "-- اختر نوع الاستقطاع --" : "-- Select Deduction --")</option>
                                                         @if (ViewBag.AllowanceTypes != null)
@@ -819,7 +824,11 @@
                                                 </div>
                                                 <div class="col-md-4 text-start">
                                                     <label class="form-label form-label-dark">@(isArabic ? "المبلغ" : "Amount")</label>
-                                                    <input name="Deductions[@i].Amount" value="@Model.Deductions[i].Amount" type="number" step="0.0001" class="form-control form-control-dark" />
+                                                    <input name="Deductions[@i].Amount"
+                                                           value="@(Model.Deductions[i].Amount?.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+                                                           type="number"
+                                                           step="0.0001"
+                                                           class="form-control form-control-dark" />
                                                 </div>
                                                 <div class="col-md-2 text-start">
                                                     <label class="form-label form-label-dark">@(isArabic ? "من تاريخ" : "From Date")</label>

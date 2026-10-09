@@ -23,5 +23,9 @@ public partial class User
 
     public bool IsActive { get; set; }
 
+    public int? CompanyId { get; set; }
+
+    public int? CompanyBranchId { get; set; }
+
     public virtual ICollection<UserAccess> UserAccesses { get; set; } = new List<UserAccess>();
 }

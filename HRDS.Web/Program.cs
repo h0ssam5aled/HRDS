@@ -1,38 +1,59 @@
 ﻿using System.Globalization;
 using HRDS.Web.Models.Entities;
-using HRDS.Web.Security; // إضافة النيم سبيس الخاص بالصلاحيات
+using HRDS.Web.Security;
 using HRDS.Web.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using HRDS.Web.ModelBinders;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ============================================================
 // 1. إضافة خدمات الترجمة وتحديد مجلد Resources
+// ============================================================
+
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 
-builder.Services.AddControllersWithViews()
-    .AddViewLocalization()
-    .AddDataAnnotationsLocalization(options => {
-        options.DataAnnotationLocalizerProvider = (type, factory) =>
-            factory.Create(typeof(HRDS.Web.Resources.Resource));
-    });
+// ============================================================
+// 2. إضافة MVC + View Localization + DataAnnotations  + Flexible Decimal Model Binder
+// ============================================================
 
-// 2. تسجيل IHttpContextAccessor والـ Interceptor للتتبع التلقائي
+builder.Services.AddControllersWithViews(options =>
+{
+    // مهم جدًا:
+    // نضع الـ Provider في أول القائمة حتى يتعامل مع
+    // decimal و decimal? قبل الـ Default Model Binder.
+    options.ModelBinderProviders.Insert(0, new FlexibleDecimalModelBinderProvider());
+})
+    .AddViewLocalization().AddDataAnnotationsLocalization(options =>
+{
+    options.DataAnnotationLocalizerProvider = (type, factory) => factory.Create(typeof(HRDS.Web.Resources.Resource));
+});
+
+// ============================================================
+// 3. تسجيل IHttpContextAccessor والـ Audit Interceptor
+// ============================================================
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AuditSaveChangesInterceptor>();
 
-// 3. ربط قاعدة البيانات HRDSContext وتفعيل الـ Interceptor مرة واحدة فقط
+// ============================================================
+// 4. ربط قاعدة البيانات HRDSContext
+// ============================================================
+
 builder.Services.AddDbContext<HRDSContext>((sp, options) =>
 {
     var interceptor = sp.GetRequiredService<AuditSaveChangesInterceptor>();
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
-           .AddInterceptors(interceptor);
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")).AddInterceptors(interceptor);
 });
 
-// 4. إضافة نظام الـ Cookie Authentication
+// ============================================================
+// 5. إضافة نظام Cookie Authentication
+// ============================================================
+
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -41,7 +62,10 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
     });
 
-// 5. ضبط اللغات المدعومة
+// ============================================================
+// 6. ضبط اللغات المدعومة
+// ============================================================
+
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
     var supportedCultures = new[]
@@ -55,29 +79,47 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
     options.DefaultRequestCulture = new RequestCulture("ar", "ar");
     options.SupportedCultures = supportedCultures;
     options.SupportedUICultures = supportedCultures;
-
     options.RequestCultureProviders.Clear();
+
     options.RequestCultureProviders.Add(new CookieRequestCultureProvider
     {
         CookieName = CookieRequestCultureProvider.DefaultCookieName
     });
 });
 
-// 6. تسجيل خدمات نظام الصلاحيات المخصص (Custom Module Authorization)
+// ============================================================
+// 7. تسجيل نظام الصلاحيات المخصص
+// ============================================================
+
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, ModulePolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, ModuleAccessHandler>();
 
-// 1. إضافة خدمة Session
+// ============================================================
+// 8. إضافة Session
+// ============================================================
+
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromHours(8); // مدة الجلسة
+    options.IdleTimeout = TimeSpan.FromHours(8);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
 
+// ============================================================
+// 9. HttpClient
+// ============================================================
+
 builder.Services.AddHttpClient();
 
+// ============================================================
+// Build Application
+// ============================================================
+
 var app = builder.Build();
+
+// ============================================================
+// 10. Error Handling / HSTS
+// ============================================================
 
 if (!app.Environment.IsDevelopment())
 {
@@ -85,28 +127,63 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// ============================================================
+// 11. HTTPS
+// ============================================================
+
 app.UseHttpsRedirection();
+
+// ============================================================
+// 12. Static Files
+// ============================================================
+
 app.UseStaticFiles();
 
-// الترتيب الصحيح للميدل وير:
+// ============================================================
+// 13. Routing
+// ============================================================
+
 app.UseRouting();
 
-// تفعيل Localization بعد الـ Routing وقبل الـ Auth
+// ============================================================
+// 14. Localization  بعد Routing وقبل Authentication
+// ============================================================
+
 var localizationOptions = app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>();
 app.UseRequestLocalization(localizationOptions.Value);
 
-// 2. تفعيل Middleware الـ Session (يجب وضعه قبل UseAuthorization)
+// ============================================================
+// 15. Session
+// ============================================================
+
 app.UseSession();
 
+// ============================================================
+// 16. Authentication
+// ============================================================
+
 app.UseAuthentication();
+
+// ============================================================
+// 17. Authorization
+// ============================================================
+
 app.UseAuthorization();
 
-app.MapControllerRoute(
-    name: "areas",
-    pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
+// ============================================================
+// 18. Area Routes
+// ============================================================
 
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+app.MapControllerRoute(name: "areas", pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
+
+// ============================================================
+// 19. Default Route
+// ============================================================
+
+app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// ============================================================
+// Run
+// ============================================================
 
 app.Run();

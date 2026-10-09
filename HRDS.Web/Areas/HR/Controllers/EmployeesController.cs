@@ -6,12 +6,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Data;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using static HRDS.Web.Areas.HR.ViewModels.EmployeeViewModel;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace HRDS.Web.Areas.HR.Controllers
 {
@@ -415,8 +417,12 @@ namespace HRDS.Web.Areas.HR.Controllers
                     }
 
                     await _context.SaveChangesAsync();
-
                     await transaction.CommitAsync();
+
+                    TempData["SuccessMessage"] = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ar"
+                    ? "تم إنشاء بيانات الموظف بنجاح." : "Employee has been created successfully.";
+
+
                     return RedirectToAction(nameof(Index));
                 }
                 catch (Exception)
@@ -1727,42 +1733,75 @@ namespace HRDS.Web.Areas.HR.Controllers
                     }
 
                     // 9. Documents
+
                     if (model.Documents != null)
                     {
+                        // المستندات الموجودة حاليًا في الـ Model
                         var currentDocIds = model.Documents.Where(d => d.DocumentId.HasValue).Select(d => d.DocumentId!.Value).ToList();
+
+                        // المستندات التي تم حذفها من الشاشة
                         var docsToRemove = employeeEntity.Documents.Where(d => !d.IsDeleted && !currentDocIds.Contains(d.DocumentId)).ToList();
 
                         foreach (var doc in docsToRemove)
                         {
                             doc.IsDeleted = true;
                             doc.DeletedAt = currentTime;
+                            doc.UpdatedAt = currentTime;
                         }
 
+                        // إضافة / تعديل المستندات
                         foreach (var doc in model.Documents)
                         {
-                            if (!doc.DocumentTypeId.HasValue) continue;
+                            // لا يوجد نوع مستند، نتجاهل السجل
+                            if (!doc.DocumentTypeId.HasValue)
+                                continue;
 
+                            // في حالة عدم رفع ملف جديد، نحتفظ بالملف الحالي
                             string? uploadedFilePath = doc.ExistingFilePath;
 
+                            // =========================================================
+                            // رفع ملف جديد
+                            // =========================================================
                             if (doc.DocumentFile != null && doc.DocumentFile.Length > 0)
                             {
+                                // Physical Path
+                                // المسار الفعلي على الجهاز أو السيرفر
                                 var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "documents");
-                                if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
 
-                                var uniqueFileName = $"{Guid.NewGuid()}_{Path.GetFileName(doc.DocumentFile.FileName)}";
-                                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                                if (!Directory.Exists(uploadsFolder))
+                                {
+                                    Directory.CreateDirectory(uploadsFolder);
+                                }
 
-                                await using (var stream = new FileStream(filePath, FileMode.Create))
+                                // الحصول على امتداد الملف فقط
+                                var extension = Path.GetExtension(doc.DocumentFile.FileName);
+
+                                // اسم ملف Unique
+                                var uniqueFileName = $"{Guid.NewGuid()}{extension}";
+
+                                // Physical file path
+                                var physicalFilePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                                // حفظ الملف فعليًا
+                                await using (var stream = new FileStream(physicalFilePath, FileMode.Create))
                                 {
                                     await doc.DocumentFile.CopyToAsync(stream);
                                 }
 
-                                uploadedFilePath = Path.Combine("uploads", "documents", uniqueFileName).Replace("\\", "/");
+                                // =====================================================
+                                // URL Path
+                                // هذا هو المسار الذي يتم تخزينه في قاعدة البيانات
+                                // =====================================================
+                                uploadedFilePath = $"/uploads/documents/{uniqueFileName}";
                             }
 
+                            // =========================================================
+                            // تعديل مستند موجود
+                            // =========================================================
                             if (doc.DocumentId.HasValue && doc.DocumentId.Value > 0)
                             {
                                 var existingDoc = employeeEntity.Documents.FirstOrDefault(d => d.DocumentId == doc.DocumentId.Value);
+
                                 if (existingDoc != null)
                                 {
                                     existingDoc.DocumentTypeId = doc.DocumentTypeId.Value;
@@ -1774,10 +1813,18 @@ namespace HRDS.Web.Areas.HR.Controllers
                                     existingDoc.Notes = doc.DocumentNotes?.Trim();
                                     existingDoc.IsActive = model.IsActive;
                                     existingDoc.UpdatedAt = currentTime;
+
+                                    // في حالة كان المستند محذوف Soft Delete
+                                    // وتم إرساله مرة أخرى
+                                    existingDoc.IsDeleted = false;
+                                    existingDoc.DeletedAt = null;
                                 }
                             }
                             else
                             {
+                                // =====================================================
+                                // إضافة مستند جديد
+                                // =====================================================
                                 var newDoc = new Document
                                 {
                                     EmployeeId = id,
@@ -1785,13 +1832,14 @@ namespace HRDS.Web.Areas.HR.Controllers
                                     DocumentNumber = doc.DocumentNumber?.Trim(),
                                     IssueDate = doc.DocumentIssueDate,
                                     ExpiryDate = doc.DocumentExpiryDate,
-                                    FilePath = "/" + uploadedFilePath,
+                                    FilePath = uploadedFilePath,
                                     IsMandatory = doc.IsDocumentMandatory,
                                     Notes = doc.DocumentNotes?.Trim(),
                                     IsActive = model.IsActive,
                                     CreatedAt = currentTime,
                                     IsDeleted = false
                                 };
+
                                 employeeEntity.Documents.Add(newDoc);
                             }
                         }

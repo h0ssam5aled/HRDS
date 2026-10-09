@@ -223,7 +223,6 @@ public partial class HRDSContext : DbContext
 
     public virtual DbSet<WorkflowTemplate> WorkflowTemplates { get; set; }
 
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AcademicFaculty>(entity =>
@@ -313,11 +312,11 @@ public partial class HRDSContext : DbContext
 
             entity.ToTable("AccountTypes", "FI");
 
+            entity.Property(e => e.AccountTypeCode).HasMaxLength(50);
             entity.Property(e => e.AccountTypeNameAr).HasMaxLength(200);
             entity.Property(e => e.AccountTypeNameEn)
                 .HasMaxLength(200)
                 .IsUnicode(false);
-            entity.Property(e => e.Code).HasMaxLength(50);
             entity.Property(e => e.CreatedDate).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.Description).HasMaxLength(300);
             entity.Property(e => e.IsActive).HasDefaultValue(true);

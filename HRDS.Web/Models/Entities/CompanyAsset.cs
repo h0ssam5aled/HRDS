@@ -27,7 +27,9 @@ public partial class CompanyAsset
 
     public int? CompanyId { get; set; }
 
-    public virtual AssetType AssetType { get; set; } = null!;
+    public int? CompanyBranchId { get; set; }
+
+    public virtual AssetType? AssetType { get; set; } = null!;
 
     public virtual EmployeeAssetAssignment? EmployeeAssetAssignment { get; set; }
 }
