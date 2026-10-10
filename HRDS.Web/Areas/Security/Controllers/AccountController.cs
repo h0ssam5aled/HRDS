@@ -81,15 +81,25 @@ namespace HRDS.Web.Areas.Security.Controllers
                     return View(model);
                 }
 
-                var hasher = new PasswordHasher<object>();
-                var verifyResult = hasher.VerifyHashedPassword(new object(), user.PasswordHash, model.Password ?? string.Empty);
+                var passwordIsValid = VerifyDatabasePassword(
+                    user.PasswordHash,
+                    model.Password ?? string.Empty,
+                    out var needsRehash);
 
-                if (verifyResult == PasswordVerificationResult.Success || verifyResult == PasswordVerificationResult.SuccessRehashNeeded)
+                if (passwordIsValid)
                 {
                     // إعادة تصفية محاولات الفشل وتحديث تاريخ آخر دخول
                     user.FailedLoginCount = 0;
                     user.LastLoginAt = DateTime.UtcNow;
                     user.LockoutUntil = null;
+
+                    // ترحيل الهاش القديم إلى BCrypt بعد نجاح تسجيل الدخول.
+                    if (needsRehash)
+                    {
+                        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password!);
+                        user.PasswordChangedAt = DateTime.UtcNow;
+                    }
+
                     await _context.SaveChangesAsync();
 
                     // جلب صلاحية الوصول الافتراضية للشركة والفرع (UserAccess)
@@ -141,6 +151,50 @@ namespace HRDS.Web.Areas.Security.Controllers
             string _err = Resource.InvalidUsernameOrPassword;
             ModelState.AddModelError(string.Empty, _err);
             return View(model);
+        }
+
+        private static bool VerifyDatabasePassword(string storedHash, string password, out bool needsRehash)
+        {
+            needsRehash = false;
+
+            // حسابات المستخدمين الجديدة تستخدم BCrypt.
+            if (storedHash.StartsWith("$2a$", StringComparison.Ordinal) ||
+                storedHash.StartsWith("$2b$", StringComparison.Ordinal) ||
+                storedHash.StartsWith("$2y$", StringComparison.Ordinal))
+            {
+                try
+                {
+                    return BCrypt.Net.BCrypt.Verify(password, storedHash);
+                }
+                catch (BCrypt.Net.SaltParseException)
+                {
+                    return false;
+                }
+            }
+
+            // دعم الهاشات القديمة المنشأة بـ ASP.NET PasswordHasher.
+            try
+            {
+                var result = new PasswordHasher<object>().VerifyHashedPassword(
+                    new object(), storedHash, password);
+
+                if (result == PasswordVerificationResult.Success ||
+                    result == PasswordVerificationResult.SuccessRehashNeeded)
+                {
+                    needsRehash = true;
+                    return true;
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                // الهاش غير معروف أو تالف؛ يعامل ككلمة مرور غير صحيحة.
+            }
+            catch (FormatException)
+            {
+                // الهاش القديم غير صالح للتنسيق المتوقع.
+            }
+
+            return false;
         }
 
         [HttpPost]

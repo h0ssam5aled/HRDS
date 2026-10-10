@@ -68,8 +68,8 @@ namespace HRDS.Web.Areas.HRConfig.Controllers
             if (!ModelState.IsValid)
             {
                 var errors = ModelState
-                    .Where(x => x.Value.Errors.Count > 0)
-                    .Select(x => $"{x.Key}: {x.Value.Errors.FirstOrDefault()?.ErrorMessage}");
+                    .Where(x => x.Value!.Errors.Count > 0)
+                    .Select(x => $"{x.Key}: {x.Value!.Errors.FirstOrDefault()?.ErrorMessage}");
 
                 return Json(new { success = false, message = "بيانات غير صالحة: " + string.Join(" | ", errors) });
             }

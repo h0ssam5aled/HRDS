@@ -110,9 +110,9 @@ namespace HRDS.Web.Areas.HR.Controllers
                         FirstNameAr = model.FirstNameAr.Trim(),
                         MiddleNameAr = model.MiddleNameAr?.Trim(),
                         LastNameAr = model.LastNameAr.Trim(),
-                        FirstNameEn = model.FirstNameEn?.Trim(),
+                        FirstNameEn = model.FirstNameEn!.Trim(),
                         MiddleNameEn = model.MiddleNameEn?.Trim(),
-                        LastNameEn = model.LastNameEn?.Trim(),
+                        LastNameEn = model.LastNameEn!.Trim(),
                         GenderId = model.GenderId,
                         ReligionId = model.ReligionId,
                         MaritalStatusId = model.MaritalStatusId,
@@ -381,7 +381,7 @@ namespace HRDS.Web.Areas.HR.Controllers
                             {
                                 EmployeeId = employeeEntity.EmployeeId,
                                 AllowanceTypeId = item.AllowanceTypeId.Value,
-                                Amount = item.Amount.Value,
+                                Amount = item.Amount!.Value,
                                 FromDate = item.FromDate.Value,
                                 ToDate = item.ToDate,
                                 Notes = item.Notes?.Trim(),
@@ -404,7 +404,7 @@ namespace HRDS.Web.Areas.HR.Controllers
                             {
                                 EmployeeId = employeeEntity.EmployeeId,
                                 DeductionTypeId = item.DeductionTypeId.Value,
-                                Amount = item.Amount.Value,
+                                Amount = item.Amount!.Value,
                                 FromDate = item.FromDate.Value,
                                 ToDate = item.ToDate,
                                 Notes = item.Notes?.Trim(),
@@ -537,67 +537,89 @@ namespace HRDS.Web.Areas.HR.Controllers
             ViewBag.DeductionTypes = new SelectList(await _context.DeductionTypes.ToListAsync() ?? new(), nameof(DeductionType.DeductionTypeId), isArabic ? nameof(DeductionType.DeductionTypeNameAr) : nameof(DeductionType.DeductionTypeNameEn));
         }
 
-        // GET: HR/Employees/Edit/5
         [HttpGet]
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null) return NotFound();
+            if (id == null)
+                return NotFound();
 
             var employee = await _context.Employees
                 .Include(e => e.EmployeesDatum)
                 .Include(e => e.EmergencyContact)
-                .Include(e => e.EmploymentHistoryEmployees) // تم تعديل اسمها بناءً على الـ Entity
-                .Include(e => e.EmployeePosition)           // علاقة 1-to-1 مفرد
+                .Include(e => e.EmploymentHistoryEmployees)
+                .Include(e => e.EmployeePositions)
                 .Include(e => e.EmployeeQualifications)
                 .Include(e => e.EmployeeBankAccounts)
                 .Include(e => e.EmployeeWorkSchedules)
                 .Include(e => e.Documents)
-                .Include(e => e.ProbationPeriod)            // علاقة 1-to-1 مفرد
-                .Include(e => e.EmployeeSalaryHistory)      // علاقة 1-to-1 مفرد
+                .Include(e => e.ProbationPeriod)
+                .Include(e => e.EmployeeSalaryHistories)
                 .Include(e => e.EmployeeAllowances)
                 .Include(e => e.EmployeeDeductions)
                 .FirstOrDefaultAsync(e => e.EmployeeId == id && !e.IsDeleted);
 
-            if (employee == null) return NotFound();
+            if (employee == null)
+                return NotFound();
 
-            // جلب بيانات العلاقات المفردة (1-to-1)
+            // البيانات الشخصية
             var datum = employee.EmployeesDatum;
             var emergency = employee.EmergencyContact;
-            var position = employee.EmployeePosition;
+
+            // اختيار الوظيفة الأساسية النشطة الحالية
+            var position = employee.EmployeePositions?
+                .Where(p => p.PrimaryPosition && p.IsActive && !p.IsDeleted && p.ToDate == null)
+                .OrderByDescending(p => p.FromDate)
+                .FirstOrDefault();
+
+            // فترة التجربة والراتب
             var probation = employee.ProbationPeriod;
-            var salary = employee.EmployeeSalaryHistory;
 
-            // جلب السجل الوظيفي من القائمة الخاصة بالموظف
-            var history = employee.EmploymentHistoryEmployees.FirstOrDefault(x => !x.IsDeleted);
+            var salary = employee.EmployeeSalaryHistories?.
+                Where(x => !x.IsDeleted && x.IsActive && x.ToDate == null).OrderByDescending(x => x.FromDate).FirstOrDefault();
 
-            // جلب أحدث سجل في القوائم المتبقية
-            var qualification = employee.EmployeeQualifications.FirstOrDefault(x => !x.IsDeleted);
-            var bankAccount = employee.EmployeeBankAccounts.FirstOrDefault(x => !x.IsDeleted);
-            var schedule = employee.EmployeeWorkSchedules.FirstOrDefault(x => !x.IsDeleted);
+            // أحدث سجل وظيفي نشط
+            var history = employee.EmploymentHistoryEmployees?
+                .Where(x => !x.IsDeleted && x.IsActive).OrderByDescending(x => x.HireDate).FirstOrDefault();
+
+            // أحدث المؤهلات والحسابات البنكية وجداول العمل
+            var qualification = employee.EmployeeQualifications?
+                .Where(x => !x.IsDeleted && x.IsActive).OrderByDescending(x => x.GraduationYear)
+                .FirstOrDefault();
+
+            var bankAccount = employee.EmployeeBankAccounts?
+                .Where(x => !x.IsDeleted && x.IsActive).FirstOrDefault();
+
+            var schedule = employee.EmployeeWorkSchedules?
+                .Where(x => !x.IsDeleted && x.IsActive).OrderByDescending(x => x.EffectiveFrom)
+                .FirstOrDefault();
 
             var model = new EmployeeViewModel
             {
                 EmployeeId = employee.EmployeeId,
                 EmployeeCode = employee.EmployeeCode,
                 EmployeeOldCode = employee.EmployeeOldCode,
+
                 FirstNameAr = employee.FirstNameAr,
                 MiddleNameAr = employee.MiddleNameAr,
                 LastNameAr = employee.LastNameAr,
+
                 FirstNameEn = employee.FirstNameEn,
                 MiddleNameEn = employee.MiddleNameEn,
                 LastNameEn = employee.LastNameEn,
+
                 GenderId = employee.GenderId,
                 ReligionId = employee.ReligionId,
                 MaritalStatusId = employee.MaritalStatusId,
                 NationalityId = employee.NationalityId,
                 MilitaryStatusId = employee.MilitaryStatusId,
+
                 DateOfBirth = employee.DateOfBirth,
                 NationalIdNo = employee.NationalIdNo,
                 PassportNumber = employee.PassportNumber,
                 DriverLicenseNumber = employee.DriverLicenseNumber,
                 IsActive = employee.IsActive,
 
-                // البيانات الشخصية والاتصال (1-to-1)
+                // البيانات الشخصية والاتصال
                 CountryId = datum?.CountryId,
                 GovernorateId = datum?.GovernorateId,
                 CityId = datum?.CityId,
@@ -608,7 +630,7 @@ namespace HRDS.Web.Areas.HR.Controllers
                 FirstMobileNo = datum?.FirstMobileNo,
                 SecondMobileNo = datum?.SecondMobileNo,
 
-                // جهات الاتصال للطوارئ (1-to-1)
+                // جهات الاتصال للطوارئ
                 ContactName = emergency?.ContactName,
                 Relationship = emergency?.Relationship,
                 EmergencyPhoneNumber = emergency?.PhoneNumber,
@@ -618,7 +640,7 @@ namespace HRDS.Web.Areas.HR.Controllers
                 IsPrimaryContact = emergency?.IsPrimary ?? true,
                 EmergencyNotes = emergency?.Notes,
 
-                // البيانات الوظيفية (من قائمة EmploymentHistoryEmployees)
+                // البيانات الوظيفية
                 DepartmentId = history?.DepartmentId,
                 SectionId = history?.SectionId,
                 JobTitleId = history?.JobTitleId,
@@ -633,7 +655,7 @@ namespace HRDS.Web.Areas.HR.Controllers
                 CompanyId = history?.CompanyId,
                 CompanyBranchId = history?.CompanyBranchId,
 
-                // المنصب الوظيفي (1-to-1)
+                // المنصب الوظيفي: الوظيفة الأساسية النشطة الحالية
                 PositionId = position?.PositionId,
                 PrimaryPosition = position?.PrimaryPosition ?? true,
                 PositionFromDate = position?.FromDate,
@@ -641,13 +663,11 @@ namespace HRDS.Web.Areas.HR.Controllers
                 AssignmentReasonId = position?.AssignmentReasonId,
 
                 // المؤهل العلمي
-                // استبدل الجزء الخاص بالمؤهل العلمي بـ:
                 QualificationId = qualification?.QualificationId,
                 EducationalInstitutionId = qualification?.InstitutionId,
                 FacultyId = qualification?.FacultyId,
                 MajorId = qualification?.MajorId,
                 GraduationYear = qualification?.GraduationYear,
-                //GradeOrGpaId = qualification?.GradeOrGpa.HasValue == true ? (int?)Math.Round(qualification.GradeOrGpa.Value) : null,
                 GradeOrGpaId = qualification?.GradeOrGpa,
                 QualificationNotes = qualification?.Notes,
 
@@ -670,19 +690,22 @@ namespace HRDS.Web.Areas.HR.Controllers
                 ScheduleRemarks = schedule?.Remarks,
 
                 // المستندات والوثائق
-                Documents = employee.Documents.Where(d => !d.IsDeleted).Select(d => new EmployeeViewModel.EmployeeDocumentInputModel
-                {
-                    DocumentId = d.DocumentId,
-                    DocumentTypeId = d.DocumentTypeId,
-                    DocumentNumber = d.DocumentNumber,
-                    DocumentIssueDate = d.IssueDate,
-                    DocumentExpiryDate = d.ExpiryDate,
-                    ExistingFilePath = d.FilePath,
-                    IsDocumentMandatory = d.IsMandatory,
-                    DocumentNotes = d.Notes
-                }).ToList(),
+                Documents = employee.Documents
+                    .Where(d => !d.IsDeleted && d.IsActive)
+                    .Select(d => new EmployeeViewModel.EmployeeDocumentInputModel
+                    {
+                        DocumentId = d.DocumentId,
+                        DocumentTypeId = d.DocumentTypeId,
+                        DocumentNumber = d.DocumentNumber,
+                        DocumentIssueDate = d.IssueDate,
+                        DocumentExpiryDate = d.ExpiryDate,
+                        ExistingFilePath = d.FilePath,
+                        IsDocumentMandatory = d.IsMandatory,
+                        DocumentNotes = d.Notes
+                    })
+                    .ToList(),
 
-                // فترة التجربة (1-to-1)
+                // فترة التجربة
                 ProbationStartDate = probation?.StartDate,
                 ProbationEndDate = probation?.EndDate,
                 IsProbationConfirmed = probation?.IsConfirmed ?? false,
@@ -690,7 +713,7 @@ namespace HRDS.Web.Areas.HR.Controllers
                 ProbationDecisionBy = probation?.DecisionBy,
                 ProbationNotes = probation?.Notes,
 
-                // تفاصيل الراتب (1-to-1)
+                // تفاصيل الراتب
                 BasicSalary = salary?.BasicSalary,
                 NetSalary = salary?.NetSalary,
                 SalaryCurrencyId = salary?.CurrencyId,
@@ -698,29 +721,37 @@ namespace HRDS.Web.Areas.HR.Controllers
                 SalaryToDate = salary?.ToDate,
                 SalaryNotes = salary?.Notes,
 
-                // البدلات والاستقطاعات
-                Allowances = employee.EmployeeAllowances.Where(a => !a.IsDeleted).Select(a => new EmployeeViewModel.EmployeeAllowanceInputModel
-                {
-                    AllowanceId = a.EmployeeAllowanceId,
-                    AllowanceTypeId = a.AllowanceTypeId,
-                    Amount = a.Amount,
-                    FromDate = a.FromDate,
-                    ToDate = a.ToDate,
-                    Notes = a.Notes
-                }).ToList(),
+                // البدلات
+                Allowances = employee.EmployeeAllowances
+                    .Where(a => !a.IsDeleted && a.IsActive)
+                    .Select(a => new EmployeeViewModel.EmployeeAllowanceInputModel
+                    {
+                        AllowanceId = a.EmployeeAllowanceId,
+                        AllowanceTypeId = a.AllowanceTypeId,
+                        Amount = a.Amount,
+                        FromDate = a.FromDate,
+                        ToDate = a.ToDate,
+                        Notes = a.Notes
+                    })
+                    .ToList(),
 
-                Deductions = employee.EmployeeDeductions.Where(d => !d.IsDeleted).Select(d => new EmployeeViewModel.EmployeeDeductionInputModel
-                {
-                    DeductionId = d.EmployeeDeductionId,
-                    DeductionTypeId = d.DeductionTypeId,
-                    Amount = d.Amount,
-                    FromDate = d.FromDate,
-                    ToDate = d.ToDate,
-                    Notes = d.Notes
-                }).ToList()
+                // الاستقطاعات
+                Deductions = employee.EmployeeDeductions
+                    .Where(d => !d.IsDeleted && d.IsActive)
+                    .Select(d => new EmployeeViewModel.EmployeeDeductionInputModel
+                    {
+                        DeductionId = d.EmployeeDeductionId,
+                        DeductionTypeId = d.DeductionTypeId,
+                        Amount = d.Amount,
+                        FromDate = d.FromDate,
+                        ToDate = d.ToDate,
+                        Notes = d.Notes
+                    })
+                    .ToList()
             };
 
             await PopulateLookupsAsync(model.CountryId, model.GovernorateId);
+
             return View(model);
         }
 
@@ -1555,13 +1586,13 @@ namespace HRDS.Web.Areas.HR.Controllers
                         .Include(e => e.EmployeesDatum)
                         .Include(e => e.EmergencyContact)
                         .Include(e => e.EmploymentHistoryEmployees)
-                        .Include(e => e.EmployeePosition)
+                        .Include(e => e.EmployeePositions)
                         .Include(e => e.EmployeeQualifications)
                         .Include(e => e.EmployeeBankAccounts)
                         .Include(e => e.EmployeeWorkSchedules)
                         .Include(e => e.Documents)
                         .Include(e => e.ProbationPeriod)
-                        .Include(e => e.EmployeeSalaryHistory)
+                        .Include(e => e.EmployeeSalaryHistories)
                         .Include(e => e.EmployeeAllowances)
                         .Include(e => e.EmployeeDeductions)
                         .FirstOrDefaultAsync(e => e.EmployeeId == id && !e.IsDeleted);
@@ -1573,9 +1604,9 @@ namespace HRDS.Web.Areas.HR.Controllers
                     employeeEntity.FirstNameAr = model.FirstNameAr.Trim();
                     employeeEntity.MiddleNameAr = model.MiddleNameAr?.Trim();
                     employeeEntity.LastNameAr = model.LastNameAr.Trim();
-                    employeeEntity.FirstNameEn = model.FirstNameEn?.Trim();
+                    employeeEntity.FirstNameEn = model.FirstNameEn!.Trim();
                     employeeEntity.MiddleNameEn = model.MiddleNameEn?.Trim();
-                    employeeEntity.LastNameEn = model.LastNameEn?.Trim();
+                    employeeEntity.LastNameEn = model.LastNameEn!.Trim();
                     employeeEntity.GenderId = model.GenderId;
                     employeeEntity.ReligionId = model.ReligionId;
                     employeeEntity.MaritalStatusId = model.MaritalStatusId;
@@ -1595,6 +1626,7 @@ namespace HRDS.Web.Areas.HR.Controllers
                         datumEntity = new EmployeesDatum { EmployeeId = id, CreatedAt = currentTime, IsDeleted = false };
                         employeeEntity.EmployeesDatum = datumEntity;
                     }
+
                     datumEntity.CountryId = model.CountryId;
                     datumEntity.GovernorateId = model.GovernorateId;
                     datumEntity.CityId = model.CityId;
@@ -1628,48 +1660,119 @@ namespace HRDS.Web.Areas.HR.Controllers
                         emergencyEntity.UpdatedAt = currentTime;
                     }
 
-                    // 4. EmploymentHistory (من قائمة EmploymentHistoryEmployees)
-                    if (model.DepartmentId.HasValue && model.JobTitleId.HasValue && model.EmploymentTypeId.HasValue && model.HireDate.HasValue)
+                    // 4. EmploymentHistory
+                    if (model.DepartmentId.HasValue && model.JobTitleId.HasValue && model.EmploymentTypeId.HasValue &&
+                        model.HireDate.HasValue)
                     {
-                        var historyEntity = employeeEntity.EmploymentHistoryEmployees.FirstOrDefault(x => !x.IsDeleted);
-                        if (historyEntity == null)
+                        // الحصول على سجل التوظيف الحالي
+                        var historyEntity = employeeEntity.EmploymentHistoryEmployees.FirstOrDefault(x => !x.IsDeleted && x.IsActive);
+
+                        bool hasChanges = historyEntity == null;
+
+                        if (historyEntity != null)
                         {
-                            historyEntity = new EmploymentHistory { EmployeeId = id, CreatedAt = currentTime, IsDeleted = false };
-                            employeeEntity.EmploymentHistoryEmployees.Add(historyEntity);
+                            hasChanges =
+                                historyEntity.DirectManagerId != model.DirectManagerId ||
+                                historyEntity.EmployeeStatusId != (model.EmployeeStatusId ?? 1) ||
+                                historyEntity.DepartmentId != model.DepartmentId.Value ||
+                                historyEntity.SectionId != model.SectionId ||
+                                historyEntity.JobTitleId != model.JobTitleId.Value ||
+                                historyEntity.JobLevelId != model.JobLevelId ||
+                                historyEntity.CostCenterId != model.CostCenterId ||
+                                historyEntity.EmploymentTypeId != model.EmploymentTypeId.Value ||
+                                historyEntity.HireDate != model.HireDate.Value ||
+                                historyEntity.TerminationDate != model.TerminationDate ||
+                                historyEntity.ResonOfLeaving != model.ResonOfLeaving?.Trim() ||
+                                historyEntity.CompanyId != model.CompanyId ||
+                                historyEntity.CompanyBranchId != model.CompanyBranchId;
                         }
-                        historyEntity.DirectManagerId = model.DirectManagerId;
-                        historyEntity.EmployeeStatusId = model.EmployeeStatusId ?? 1;
-                        historyEntity.DepartmentId = model.DepartmentId.Value;
-                        historyEntity.SectionId = model.SectionId;
-                        historyEntity.JobTitleId = model.JobTitleId.Value;
-                        historyEntity.JobLevelId = model.JobLevelId;
-                        historyEntity.CostCenterId = model.CostCenterId;
-                        historyEntity.EmploymentTypeId = model.EmploymentTypeId.Value;
-                        historyEntity.HireDate = model.HireDate.Value;
-                        historyEntity.TerminationDate = model.TerminationDate;
-                        historyEntity.ResonOfLeaving = model.ResonOfLeaving?.Trim();
-                        historyEntity.CompanyId = model.CompanyId;
-                        historyEntity.CompanyBranchId = model.CompanyBranchId;
-                        historyEntity.IsActive = model.IsActive;
-                        historyEntity.UpdatedAt = currentTime;
+
+                        // إنشاء إصدار جديد فقط عند وجود تغيير
+                        if (hasChanges)
+                        {
+                            // إغلاق السجل القديم مع الاحتفاظ به
+                            if (historyEntity != null)
+                            {
+                                historyEntity.IsActive = false;
+                                historyEntity.UpdatedAt = currentTime;
+                            }
+
+                            // إنشاء سجل جديد بالبيانات المعدلة
+                            var newHistory = new EmploymentHistory
+                            {
+                                EmployeeId = id,
+
+                                DirectManagerId = model.DirectManagerId,
+                                EmployeeStatusId = model.EmployeeStatusId ?? 1,
+                                DepartmentId = model.DepartmentId.Value,
+                                SectionId = model.SectionId,
+                                JobTitleId = model.JobTitleId.Value,
+                                JobLevelId = model.JobLevelId,
+                                CostCenterId = model.CostCenterId,
+                                EmploymentTypeId = model.EmploymentTypeId.Value,
+                                HireDate = model.HireDate.Value,
+                                TerminationDate = model.TerminationDate,
+                                ResonOfLeaving = model.ResonOfLeaving?.Trim(),
+                                CompanyId = model.CompanyId,
+                                CompanyBranchId = model.CompanyBranchId,
+
+                                IsActive = model.IsActive,
+                                IsDeleted = false,
+                                CreatedAt = currentTime
+                            };
+
+                            employeeEntity.EmploymentHistoryEmployees.Add(newHistory);
+                        }
                     }
 
-                    // 5. EmployeePosition (1-to-1)
+                    // 5. EmployeePosition
                     if (model.PositionId.HasValue && model.PositionFromDate.HasValue)
                     {
-                        var positionEntity = employeeEntity.EmployeePosition;
-                        if (positionEntity == null)
+                        // البحث عن المنصب الأساسي النشط الحالي
+                        var positionEntity = employeeEntity.EmployeePositions
+                            .FirstOrDefault(p => p.PrimaryPosition && p.IsActive && !p.IsDeleted && p.ToDate == null);
+
+                        bool hasChanges = positionEntity == null;
+
+                        if (positionEntity != null)
                         {
-                            positionEntity = new EmployeePosition { EmployeeId = id, CreatedAt = currentTime, IsDeleted = false };
-                            employeeEntity.EmployeePosition = positionEntity;
+                            hasChanges =
+                                positionEntity.PositionId != model.PositionId.Value ||
+                                positionEntity.PrimaryPosition != model.PrimaryPosition ||
+                                positionEntity.FromDate != model.PositionFromDate.Value ||
+                                positionEntity.ToDate != model.PositionToDate ||
+                                positionEntity.AssignmentReasonId != model.AssignmentReasonId;
                         }
-                        positionEntity.PositionId = model.PositionId.Value;
-                        positionEntity.PrimaryPosition = model.PrimaryPosition;
-                        positionEntity.FromDate = model.PositionFromDate.Value;
-                        positionEntity.ToDate = model.PositionToDate;
-                        positionEntity.AssignmentReasonId = model.AssignmentReasonId;
-                        positionEntity.IsActive = model.IsActive;
-                        positionEntity.UpdatedAt = currentTime;
+
+                        // إنشاء إصدار جديد فقط عند وجود تغيير
+                        if (hasChanges)
+                        {
+                            // إغلاق الإصدار القديم والاحتفاظ به في السجل التاريخي
+                            if (positionEntity != null)
+                            {
+                                positionEntity.IsActive = false;
+                                positionEntity.PrimaryPosition = false;
+                                positionEntity.ToDate = model.PositionFromDate.Value;
+                                positionEntity.UpdatedAt = currentTime;
+                            }
+
+                            // إنشاء الإصدار الجديد
+                            var newPosition = new EmployeePosition
+                            {
+                                EmployeeId = id,
+                                PositionId = model.PositionId.Value,
+                                PrimaryPosition = model.PrimaryPosition,
+                                FromDate = model.PositionFromDate.Value,
+                                ToDate = model.PositionToDate,
+                                AssignmentReasonId = model.AssignmentReasonId,
+                                IsActive = model.IsActive,
+                                IsDeleted = false,
+                                CreatedAt = currentTime
+                            };
+
+                            // إضافة السجل الجديد دون حذف السجلات التاريخية
+                            employeeEntity.EmployeePositions.Add(newPosition);
+                        }
                     }
 
                     // 6. EmployeeQualification
@@ -1695,136 +1798,185 @@ namespace HRDS.Web.Areas.HR.Controllers
                     // 7. EmployeeBankAccount
                     if (model.BankId.HasValue && !string.IsNullOrWhiteSpace(model.AccountNumber))
                     {
-                        var bankEntity = employeeEntity.EmployeeBankAccounts.FirstOrDefault(x => !x.IsDeleted);
-                        if (bankEntity == null)
+                        // الحصول على الحساب البنكي الحالي
+                        var bankEntity = employeeEntity.EmployeeBankAccounts.FirstOrDefault(x => !x.IsDeleted && x.IsActive);
+
+                        var accountNumber = model.AccountNumber.Trim();
+                        var iban = model.Iban?.Trim();
+
+                        bool hasChanges = bankEntity == null;
+
+                        if (bankEntity != null)
                         {
-                            bankEntity = new EmployeeBankAccount { EmployeeId = id, CreatedAt = currentTime, IsDeleted = false };
-                            employeeEntity.EmployeeBankAccounts.Add(bankEntity);
+                            hasChanges =
+                                bankEntity.BankId != model.BankId.Value ||
+                                bankEntity.BranchId != model.BankBranchId ||
+                                bankEntity.AccountNumber != accountNumber ||
+                                bankEntity.EmployeeBankAccountTypeId != model.EmployeeBankAccountTypeId ||
+                                bankEntity.Iban != iban ||
+                                bankEntity.CurrencyId != model.CurrencyId ||
+                                bankEntity.IsPrimary != model.IsPrimaryBankAccount;
                         }
-                        bankEntity.BankId = model.BankId.Value;
-                        bankEntity.BranchId = model.BankBranchId;
-                        bankEntity.AccountNumber = model.AccountNumber.Trim();
-                        bankEntity.EmployeeBankAccountTypeId = model.EmployeeBankAccountTypeId;
-                        bankEntity.Iban = model.Iban?.Trim();
-                        bankEntity.CurrencyId = model.CurrencyId;
-                        bankEntity.IsPrimary = model.IsPrimaryBankAccount;
-                        bankEntity.IsActive = model.IsActive;
-                        bankEntity.UpdatedAt = currentTime;
+
+                        // إنشاء إصدار جديد فقط عند وجود تغيير
+                        if (hasChanges)
+                        {
+                            // إغلاق الحساب القديم مع الاحتفاظ به
+                            if (bankEntity != null)
+                            {
+                                bankEntity.IsActive = false;
+                                bankEntity.IsPrimary = false;
+                                bankEntity.UpdatedAt = currentTime;
+                            }
+
+                            // إنشاء سجل جديد بالبيانات المعدلة
+                            var newBankAccount = new EmployeeBankAccount
+                            {
+                                EmployeeId = id,
+                                BankId = model.BankId.Value,
+                                BranchId = model.BankBranchId,
+                                AccountNumber = accountNumber,
+                                EmployeeBankAccountTypeId = model.EmployeeBankAccountTypeId,
+                                Iban = iban,
+                                CurrencyId = model.CurrencyId,
+                                IsPrimary = model.IsPrimaryBankAccount,
+                                IsActive = true,
+                                IsDeleted = false,
+                                CreatedAt = currentTime
+                            };
+
+                            employeeEntity.EmployeeBankAccounts.Add(newBankAccount);
+                        }
                     }
 
                     // 8. EmployeeWorkSchedule
                     if (model.ScheduleEffectiveFrom.HasValue && (model.ShiftId.HasValue || model.ShiftPatternId.HasValue))
                     {
-                        var scheduleEntity = employeeEntity.EmployeeWorkSchedules.FirstOrDefault(x => !x.IsDeleted);
-                        if (scheduleEntity == null)
+                        // الحصول على جدول العمل الحالي
+                        var scheduleEntity = employeeEntity.EmployeeWorkSchedules.FirstOrDefault(x => !x.IsDeleted && x.IsActive);
+                        var remarks = model.ScheduleRemarks?.Trim();
+                        bool hasChanges = scheduleEntity == null;
+
+                        if (scheduleEntity != null)
                         {
-                            scheduleEntity = new EmployeeWorkSchedule { EmployeeId = id, CreatedAt = currentTime, IsDeleted = false };
-                            employeeEntity.EmployeeWorkSchedules.Add(scheduleEntity);
+                            hasChanges =
+                                scheduleEntity.ShiftId != model.ShiftId ||
+                                scheduleEntity.PatternId != model.ShiftPatternId ||
+                                scheduleEntity.ScheduleType != model.ScheduleType ||
+                                scheduleEntity.EffectiveFrom != model.ScheduleEffectiveFrom.Value ||
+                                scheduleEntity.EffectiveTo != model.ScheduleEffectiveTo ||
+                                scheduleEntity.Priority != model.SchedulePriority ||
+                                scheduleEntity.Remarks != remarks;
                         }
-                        scheduleEntity.ShiftId = model.ShiftId;
-                        scheduleEntity.PatternId = model.ShiftPatternId;
-                        scheduleEntity.ScheduleType = model.ScheduleType;
-                        scheduleEntity.EffectiveFrom = model.ScheduleEffectiveFrom.Value;
-                        scheduleEntity.EffectiveTo = model.ScheduleEffectiveTo;
-                        scheduleEntity.Priority = model.SchedulePriority;
-                        scheduleEntity.Remarks = model.ScheduleRemarks?.Trim();
-                        scheduleEntity.IsActive = model.IsActive;
-                        scheduleEntity.UpdatedAt = currentTime;
+
+                        // إنشاء إصدار جديد فقط عند وجود تغيير
+                        if (hasChanges)
+                        {
+                            // إغلاق السجل القديم مع الاحتفاظ به
+                            if (scheduleEntity != null)
+                            {
+                                scheduleEntity.IsActive = false;
+                                scheduleEntity.UpdatedAt = currentTime;
+                            }
+
+                            // إنشاء سجل جديد بالبيانات المعدلة
+                            var newSchedule = new EmployeeWorkSchedule
+                            {
+                                EmployeeId = id,
+                                ShiftId = model.ShiftId,
+                                PatternId = model.ShiftPatternId,
+                                ScheduleType = model.ScheduleType,
+                                EffectiveFrom = model.ScheduleEffectiveFrom.Value,
+                                EffectiveTo = model.ScheduleEffectiveTo,
+                                Priority = model.SchedulePriority,
+                                Remarks = remarks,
+                                IsActive = true,
+                                IsDeleted = false,
+                                CreatedAt = currentTime
+                            };
+
+                            employeeEntity.EmployeeWorkSchedules.Add(newSchedule);
+                        }
                     }
 
                     // 9. Documents
-
                     if (model.Documents != null)
                     {
-                        // المستندات الموجودة حاليًا في الـ Model
-                        var currentDocIds = model.Documents.Where(d => d.DocumentId.HasValue).Select(d => d.DocumentId!.Value).ToList();
+                        // تحديد المستندات الموجودة في الشاشة
+                        var currentDocIds = model.Documents
+                            .Where(d => d.DocumentId.HasValue && d.DocumentId.Value > 0).Select(d => d.DocumentId!.Value).ToList();
 
                         // المستندات التي تم حذفها من الشاشة
-                        var docsToRemove = employeeEntity.Documents.Where(d => !d.IsDeleted && !currentDocIds.Contains(d.DocumentId)).ToList();
+                        var docsToRemove = employeeEntity.Documents
+                            .Where(d => !d.IsDeleted && d.IsActive && !currentDocIds.Contains(d.DocumentId)).ToList();
 
                         foreach (var doc in docsToRemove)
                         {
-                            doc.IsDeleted = true;
-                            doc.DeletedAt = currentTime;
+                            doc.IsActive = false;
                             doc.UpdatedAt = currentTime;
                         }
 
-                        // إضافة / تعديل المستندات
+                        // معالجة المستندات الموجودة والجديدة
                         foreach (var doc in model.Documents)
                         {
-                            // لا يوجد نوع مستند، نتجاهل السجل
                             if (!doc.DocumentTypeId.HasValue)
                                 continue;
 
-                            // في حالة عدم رفع ملف جديد، نحتفظ بالملف الحالي
                             string? uploadedFilePath = doc.ExistingFilePath;
 
-                            // =========================================================
-                            // رفع ملف جديد
-                            // =========================================================
-                            if (doc.DocumentFile != null && doc.DocumentFile.Length > 0)
+                            bool newFileUploaded = doc.DocumentFile != null && doc.DocumentFile.Length > 0;
+
+                            // رفع ملف جديد إن وجد
+                            if (newFileUploaded)
                             {
-                                // Physical Path
-                                // المسار الفعلي على الجهاز أو السيرفر
                                 var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "documents");
-
-                                if (!Directory.Exists(uploadsFolder))
-                                {
-                                    Directory.CreateDirectory(uploadsFolder);
-                                }
-
-                                // الحصول على امتداد الملف فقط
-                                var extension = Path.GetExtension(doc.DocumentFile.FileName);
-
-                                // اسم ملف Unique
+                                Directory.CreateDirectory(uploadsFolder);
+                                var extension = Path.GetExtension(doc.DocumentFile!.FileName);
                                 var uniqueFileName = $"{Guid.NewGuid()}{extension}";
-
-                                // Physical file path
                                 var physicalFilePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                                // حفظ الملف فعليًا
                                 await using (var stream = new FileStream(physicalFilePath, FileMode.Create))
                                 {
                                     await doc.DocumentFile.CopyToAsync(stream);
                                 }
 
-                                // =====================================================
-                                // URL Path
-                                // هذا هو المسار الذي يتم تخزينه في قاعدة البيانات
-                                // =====================================================
                                 uploadedFilePath = $"/uploads/documents/{uniqueFileName}";
                             }
 
-                            // =========================================================
-                            // تعديل مستند موجود
-                            // =========================================================
+                            // البحث عن السجل الحالي للمستند
+                            Document? existingDoc = null;
+
                             if (doc.DocumentId.HasValue && doc.DocumentId.Value > 0)
                             {
-                                var existingDoc = employeeEntity.Documents.FirstOrDefault(d => d.DocumentId == doc.DocumentId.Value);
+                                existingDoc = employeeEntity.Documents
+                                    .FirstOrDefault(d => d.DocumentId == doc.DocumentId.Value && !d.IsDeleted && d.IsActive);
+                            }
 
+                            // تحديد هل المستند جديد أو تم تغيير بياناته
+                            bool hasChanges = existingDoc == null;
+
+                            if (existingDoc != null)
+                            {
+                                hasChanges =
+                                    existingDoc.DocumentTypeId != doc.DocumentTypeId.Value ||
+                                    existingDoc.DocumentNumber != doc.DocumentNumber?.Trim() ||
+                                    existingDoc.IssueDate != doc.DocumentIssueDate ||
+                                    existingDoc.ExpiryDate != doc.DocumentExpiryDate ||
+                                    existingDoc.IsMandatory != doc.IsDocumentMandatory ||
+                                    existingDoc.Notes != doc.DocumentNotes?.Trim() ||
+                                    newFileUploaded;
+                            }
+
+                            // إنشاء إصدار جديد فقط عند وجود تغيير
+                            if (hasChanges)
+                            {
+                                // إغلاق الإصدار القديم مع الاحتفاظ به
                                 if (existingDoc != null)
                                 {
-                                    existingDoc.DocumentTypeId = doc.DocumentTypeId.Value;
-                                    existingDoc.DocumentNumber = doc.DocumentNumber?.Trim();
-                                    existingDoc.IssueDate = doc.DocumentIssueDate;
-                                    existingDoc.ExpiryDate = doc.DocumentExpiryDate;
-                                    existingDoc.FilePath = uploadedFilePath;
-                                    existingDoc.IsMandatory = doc.IsDocumentMandatory;
-                                    existingDoc.Notes = doc.DocumentNotes?.Trim();
-                                    existingDoc.IsActive = model.IsActive;
+                                    existingDoc.IsActive = false;
                                     existingDoc.UpdatedAt = currentTime;
-
-                                    // في حالة كان المستند محذوف Soft Delete
-                                    // وتم إرساله مرة أخرى
-                                    existingDoc.IsDeleted = false;
-                                    existingDoc.DeletedAt = null;
                                 }
-                            }
-                            else
-                            {
-                                // =====================================================
-                                // إضافة مستند جديد
-                                // =====================================================
+
+                                // إنشاء سجل جديد للمستند
                                 var newDoc = new Document
                                 {
                                     EmployeeId = id,
@@ -1835,9 +1987,9 @@ namespace HRDS.Web.Areas.HR.Controllers
                                     FilePath = uploadedFilePath,
                                     IsMandatory = doc.IsDocumentMandatory,
                                     Notes = doc.DocumentNotes?.Trim(),
-                                    IsActive = model.IsActive,
-                                    CreatedAt = currentTime,
-                                    IsDeleted = false
+                                    IsActive = true,
+                                    IsDeleted = false,
+                                    CreatedAt = currentTime
                                 };
 
                                 employeeEntity.Documents.Add(newDoc);
@@ -1864,122 +2016,227 @@ namespace HRDS.Web.Areas.HR.Controllers
                         probationEntity.UpdatedAt = currentTime;
                     }
 
-                    // 11. EmployeeSalaryHistory (1-to-1)
+                    // 11. EmployeeSalaryHistory
                     if (model.BasicSalary.HasValue && model.SalaryFromDate.HasValue)
                     {
-                        var salaryEntity = employeeEntity.EmployeeSalaryHistory;
-                        if (salaryEntity == null)
+                        // الحصول على سجل الراتب الحالي
+                        var salaryEntity = employeeEntity.EmployeeSalaryHistories.FirstOrDefault(x => !x.IsDeleted && x.IsActive);
+
+                        var netSalary = model.NetSalary ?? model.BasicSalary.Value;
+                        var notes = model.SalaryNotes?.Trim();
+
+                        bool hasChanges = salaryEntity == null;
+
+                        if (salaryEntity != null)
                         {
-                            salaryEntity = new EmployeeSalaryHistory { EmployeeId = id, CreatedAt = currentTime, IsDeleted = false };
-                            employeeEntity.EmployeeSalaryHistory = salaryEntity;
+                            hasChanges =
+                                salaryEntity.BasicSalary != model.BasicSalary.Value ||
+                                salaryEntity.NetSalary != netSalary ||
+                                salaryEntity.CurrencyId != model.SalaryCurrencyId ||
+                                salaryEntity.FromDate != model.SalaryFromDate.Value ||
+                                salaryEntity.ToDate != model.SalaryToDate ||
+                                salaryEntity.Notes != notes;
                         }
-                        salaryEntity.BasicSalary = model.BasicSalary.Value;
-                        salaryEntity.NetSalary = model.NetSalary ?? model.BasicSalary.Value;
-                        salaryEntity.CurrencyId = model.SalaryCurrencyId;
-                        salaryEntity.FromDate = model.SalaryFromDate.Value;
-                        salaryEntity.ToDate = model.SalaryToDate;
-                        salaryEntity.Notes = model.SalaryNotes?.Trim();
-                        salaryEntity.IsActive = model.IsActive;
-                        salaryEntity.UpdatedAt = currentTime;
+
+                        // إنشاء إصدار جديد فقط عند وجود تغيير
+                        if (hasChanges)
+                        {
+                            // إغلاق سجل الراتب القديم مع الاحتفاظ به
+                            if (salaryEntity != null)
+                            {
+                                salaryEntity.IsActive = false;
+                                salaryEntity.UpdatedAt = currentTime;
+                            }
+
+                            // إنشاء سجل راتب جديد
+                            var newSalary = new EmployeeSalaryHistory
+                            {
+                                EmployeeId = id,
+                                BasicSalary = model.BasicSalary.Value,
+                                NetSalary = netSalary,
+                                CurrencyId = model.SalaryCurrencyId,
+                                FromDate = model.SalaryFromDate.Value,
+                                ToDate = model.SalaryToDate,
+                                Notes = notes,
+                                IsActive = true,
+                                IsDeleted = false,
+                                CreatedAt = currentTime
+                            };
+
+                            employeeEntity.EmployeeSalaryHistories.Add(newSalary);
+                        }
                     }
 
                     // 12. Allowances
                     if (model.Allowances != null)
                     {
-                        var currentAllowanceIds = model.Allowances.Where(a => a.AllowanceId.HasValue).Select(a => a.AllowanceId!.Value).ToList();
-                        var allowancesToRemove = employeeEntity.EmployeeAllowances.Where(a => !a.IsDeleted && !currentAllowanceIds.Contains(a.EmployeeAllowanceId)).ToList();
+                        // تحديد أرقام سجلات البدلات الموجودة في الشاشة
+                        var currentAllowanceIds = model.Allowances.Where(a => a.AllowanceId.HasValue && a.AllowanceId.Value > 0).Select(a => a.AllowanceId!.Value).ToList();
+
+                        // تحديد البدلات التي حذفها المستخدم من الشاشة
+                        var allowancesToRemove = employeeEntity.EmployeeAllowances
+                            .Where(a => !a.IsDeleted && a.IsActive && !currentAllowanceIds.Contains(a.EmployeeAllowanceId)).ToList();
 
                         foreach (var allowance in allowancesToRemove)
                         {
+                            allowance.IsActive = false;
                             allowance.IsDeleted = true;
                             allowance.DeletedAt = currentTime;
+                            allowance.UpdatedAt = currentTime;
                         }
 
+                        // إضافة البدلات الجديدة أو إنشاء إصدارات عند التعديل
                         foreach (var item in model.Allowances)
                         {
-                            if (!item.AllowanceTypeId.HasValue || !item.FromDate.HasValue) continue;
+                            // التحقق من البيانات المطلوبة
+                            if (!item.AllowanceTypeId.HasValue ||
+                                !item.FromDate.HasValue ||
+                                !item.Amount.HasValue)
+                            {
+                                continue;
+                            }
 
+                            var notes = item.Notes?.Trim();
+
+                            EmployeeAllowance? existingAllowance = null;
+
+                            // البحث عن السجل الحالي إذا كان السطر موجودًا بالفعل
                             if (item.AllowanceId.HasValue && item.AllowanceId.Value > 0)
                             {
-                                var existingAllowance = employeeEntity.EmployeeAllowances.FirstOrDefault(a => a.EmployeeAllowanceId == item.AllowanceId.Value);
-                                if (existingAllowance != null)
-                                {
-                                    existingAllowance.AllowanceTypeId = item.AllowanceTypeId.Value;
-                                    existingAllowance.Amount = item.Amount.Value;
-                                    existingAllowance.FromDate = item.FromDate.Value;
-                                    existingAllowance.ToDate = item.ToDate;
-                                    existingAllowance.Notes = item.Notes?.Trim();
-                                    existingAllowance.IsActive = model.IsActive;
-                                    existingAllowance.UpdatedAt = currentTime;
-                                }
+                                existingAllowance = employeeEntity.EmployeeAllowances
+                                    .FirstOrDefault(a => a.EmployeeAllowanceId == item.AllowanceId.Value && !a.IsDeleted && a.IsActive);
                             }
-                            else
+
+                            // السجل الجديد يحتاج إلى إضافة
+                            // أما السجل الموجود، فلا نضيف إصدارًا إلا إذا تغيرت بياناته
+                            bool hasChanges = existingAllowance == null;
+
+                            if (existingAllowance != null)
                             {
-                                var newAllowance = new EmployeeAllowance
-                                {
-                                    EmployeeId = id,
-                                    AllowanceTypeId = item.AllowanceTypeId.Value,
-                                    Amount = item.Amount.Value,
-                                    FromDate = item.FromDate.Value,
-                                    ToDate = item.ToDate,
-                                    Notes = item.Notes?.Trim(),
-                                    IsActive = model.IsActive,
-                                    CreatedAt = currentTime,
-                                    IsDeleted = false
-                                };
-                                employeeEntity.EmployeeAllowances.Add(newAllowance);
+                                hasChanges =
+                                    existingAllowance.AllowanceTypeId != item.AllowanceTypeId.Value ||
+                                    existingAllowance.Amount != item.Amount.Value ||
+                                    existingAllowance.FromDate != item.FromDate.Value ||
+                                    existingAllowance.ToDate != item.ToDate ||
+                                    existingAllowance.Notes != notes;
                             }
+
+                            if (!hasChanges)
+                            {
+                                continue;
+                            }
+
+                            // إغلاق الإصدار القديم دون حذفه من قاعدة البيانات
+                            if (existingAllowance != null)
+                            {
+                                existingAllowance.IsActive = false;
+                                existingAllowance.UpdatedAt = currentTime;
+                            }
+
+                            // إنشاء سجل جديد مستقل لكل سطر
+                            var newAllowance = new EmployeeAllowance
+                            {
+                                EmployeeId = id,
+                                AllowanceTypeId = item.AllowanceTypeId.Value,
+                                Amount = item.Amount.Value,
+                                FromDate = item.FromDate.Value,
+                                ToDate = item.ToDate,
+                                Notes = notes,
+                                IsActive = model.IsActive,
+                                IsDeleted = false,
+                                CreatedAt = currentTime
+                            };
+
+                            employeeEntity.EmployeeAllowances.Add(newAllowance);
                         }
                     }
 
                     // 13. Deductions
                     if (model.Deductions != null)
                     {
-                        var currentDeductionIds = model.Deductions.Where(d => d.DeductionId.HasValue).Select(d => d.DeductionId!.Value).ToList();
-                        var deductionsToRemove = employeeEntity.EmployeeDeductions.Where(d => !d.IsDeleted && !currentDeductionIds.Contains(d.EmployeeDeductionId)).ToList();
+                        // تحديد أرقام سجلات الخصومات الموجودة في الشاشة
+                        var currentDeductionIds = model.Deductions
+                            .Where(d => d.DeductionId.HasValue && d.DeductionId.Value > 0).Select(d => d.DeductionId!.Value).ToList();
+
+                        // تحديد الخصومات التي حذفها المستخدم من الشاشة
+                        var deductionsToRemove = employeeEntity.EmployeeDeductions
+                            .Where(d => !d.IsDeleted && d.IsActive && !currentDeductionIds.Contains(d.EmployeeDeductionId)).ToList();
 
                         foreach (var deduction in deductionsToRemove)
                         {
+                            deduction.IsActive = false;
                             deduction.IsDeleted = true;
                             deduction.DeletedAt = currentTime;
+                            deduction.UpdatedAt = currentTime;
                         }
 
+                        // إضافة الخصومات الجديدة أو إنشاء إصدارات عند التعديل
                         foreach (var item in model.Deductions)
                         {
-                            if (!item.DeductionTypeId.HasValue || !item.FromDate.HasValue) continue;
+                            // التحقق من البيانات المطلوبة
+                            if (!item.DeductionTypeId.HasValue ||
+                                !item.FromDate.HasValue ||
+                                !item.Amount.HasValue)
+                            {
+                                continue;
+                            }
 
+                            var notes = item.Notes?.Trim();
+
+                            EmployeeDeduction? existingDeduction = null;
+
+                            // البحث عن سجل الخصم الحالي
                             if (item.DeductionId.HasValue && item.DeductionId.Value > 0)
                             {
-                                var existingDeduction = employeeEntity.EmployeeDeductions.FirstOrDefault(d => d.EmployeeDeductionId == item.DeductionId.Value);
-                                if (existingDeduction != null)
-                                {
-                                    existingDeduction.DeductionTypeId = item.DeductionTypeId.Value;
-                                    existingDeduction.Amount = item.Amount.Value;
-                                    existingDeduction.FromDate = item.FromDate.Value;
-                                    existingDeduction.ToDate = item.ToDate;
-                                    existingDeduction.Notes = item.Notes?.Trim();
-                                    existingDeduction.IsActive = model.IsActive;
-                                    existingDeduction.UpdatedAt = currentTime;
-                                }
+                                existingDeduction = employeeEntity.EmployeeDeductions
+                                    .FirstOrDefault(d => d.EmployeeDeductionId == item.DeductionId.Value && !d.IsDeleted && d.IsActive);
                             }
-                            else
+
+                            // السجل الجديد يحتاج إلى إضافة
+                            // السجل الحالي يُضاف له إصدار جديد فقط إذا تغيرت بياناته
+                            bool hasChanges = existingDeduction == null;
+
+                            if (existingDeduction != null)
                             {
-                                var newDeduction = new EmployeeDeduction
-                                {
-                                    EmployeeId = id,
-                                    DeductionTypeId = item.DeductionTypeId.Value,
-                                    Amount = item.Amount.Value,
-                                    FromDate = item.FromDate.Value,
-                                    ToDate = item.ToDate,
-                                    Notes = item.Notes?.Trim(),
-                                    IsActive = model.IsActive,
-                                    CreatedAt = currentTime,
-                                    IsDeleted = false
-                                };
-                                employeeEntity.EmployeeDeductions.Add(newDeduction);
+                                hasChanges =
+                                    existingDeduction.DeductionTypeId != item.DeductionTypeId.Value ||
+                                    existingDeduction.Amount != item.Amount.Value ||
+                                    existingDeduction.FromDate != item.FromDate.Value ||
+                                    existingDeduction.ToDate != item.ToDate ||
+                                    existingDeduction.Notes != notes;
                             }
+
+                            // لا يوجد تغيير، فلا نضيف إصدارًا جديدًا
+                            if (!hasChanges)
+                            {
+                                continue;
+                            }
+
+                            // إغلاق السجل القديم مع الاحتفاظ به للتاريخ
+                            if (existingDeduction != null)
+                            {
+                                existingDeduction.IsActive = false;
+                                existingDeduction.UpdatedAt = currentTime;
+                            }
+
+                            // إنشاء سجل خصم جديد
+                            var newDeduction = new EmployeeDeduction
+                            {
+                                EmployeeId = id,
+                                DeductionTypeId = item.DeductionTypeId.Value,
+                                Amount = item.Amount.Value,
+                                FromDate = item.FromDate.Value,
+                                ToDate = item.ToDate,
+                                Notes = notes,
+                                IsActive = model.IsActive,
+                                IsDeleted = false,
+                                CreatedAt = currentTime
+                            };
+
+                            employeeEntity.EmployeeDeductions.Add(newDeduction);
                         }
                     }
+
 
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();

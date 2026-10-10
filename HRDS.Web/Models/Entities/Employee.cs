@@ -81,7 +81,7 @@ public partial class Employee
 
     public virtual ICollection<EmployeePenalty> EmployeePenalties { get; set; } = new List<EmployeePenalty>();
 
-    public virtual EmployeePosition? EmployeePosition { get; set; }
+    public virtual ICollection<EmployeePosition> EmployeePositions { get; set; } = new List<EmployeePosition>();
 
     public virtual ICollection<EmployeeQualification> EmployeeQualifications { get; set; } = new List<EmployeeQualification>();
 
@@ -89,7 +89,7 @@ public partial class Employee
 
     public virtual ICollection<EmployeeSalaryDetail> EmployeeSalaryDetails { get; set; } = new List<EmployeeSalaryDetail>();
 
-    public virtual EmployeeSalaryHistory? EmployeeSalaryHistory { get; set; }
+    public virtual ICollection<EmployeeSalaryHistory> EmployeeSalaryHistories { get; set; } = new List<EmployeeSalaryHistory>();
 
     public virtual ICollection<EmployeeWorkSchedule> EmployeeWorkSchedules { get; set; } = new List<EmployeeWorkSchedule>();
 

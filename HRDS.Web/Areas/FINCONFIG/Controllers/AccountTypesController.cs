@@ -38,7 +38,7 @@ namespace HRDS.Web.Controllers
             var list = rawData.Select(x => new AccountTypeViewModel
             {
                 AccountTypeId = x.AccountTypeId,
-                Code = x.Code,
+                Code = x.AccountTypeCode,
                 AccountTypeNameAr = x.AccountTypeNameAr,
                 AccountTypeNameEn = x.AccountTypeNameEn,
                 DisplayAccountTypeName = isEn && !string.IsNullOrEmpty(x.AccountTypeNameEn) ? x.AccountTypeNameEn : x.AccountTypeNameAr,
@@ -58,7 +58,7 @@ namespace HRDS.Web.Controllers
             var model = new AccountTypeViewModel
             {
                 AccountTypeId = entity.AccountTypeId,
-                Code = entity.Code,
+                Code = entity.AccountTypeCode,
                 AccountTypeNameAr = entity.AccountTypeNameAr,
                 AccountTypeNameEn = entity.AccountTypeNameEn,
                 Description = entity.Description,
@@ -78,7 +78,7 @@ namespace HRDS.Web.Controllers
             {
                 var entity = new AccountType
                 {
-                    Code = model.Code.ToUpper().Trim(),
+                    AccountTypeCode = model.Code.ToUpper().Trim(),
                     AccountTypeNameAr = model.AccountTypeNameAr.Trim(),
                     AccountTypeNameEn = model.AccountTypeNameEn?.Trim(),
                     Description = model.Description?.Trim(),
@@ -92,7 +92,7 @@ namespace HRDS.Web.Controllers
                 var entity = await _context.AccountTypes.FirstOrDefaultAsync(x => x.AccountTypeId == model.AccountTypeId);
                 if (entity == null) return Json(new { success = false, message = "Record Not Found" });
 
-                entity.Code = model.Code.ToUpper().Trim();
+                entity.AccountTypeCode = model.Code.ToUpper().Trim();
                 entity.AccountTypeNameAr = model.AccountTypeNameAr.Trim();
                 entity.AccountTypeNameEn = model.AccountTypeNameEn?.Trim();
                 entity.Description = model.Description?.Trim();

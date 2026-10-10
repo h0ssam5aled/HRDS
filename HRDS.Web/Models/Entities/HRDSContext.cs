@@ -6,15 +6,6 @@ namespace HRDS.Web.Models.Entities;
 
 public partial class HRDSContext : DbContext
 {
-    public HRDSContext()
-    {
-    }
-
-    public HRDSContext(DbContextOptions<HRDSContext> options)
-        : base(options)
-    {
-    }
-
     public virtual DbSet<AcademicFaculty> AcademicFaculties { get; set; }
 
     public virtual DbSet<AcademicMajor> AcademicMajors { get; set; }
@@ -1248,10 +1239,6 @@ public partial class HRDSContext : DbContext
 
             entity.HasIndex(e => new { e.EmployeeId, e.FromDate }, "IX_HREmployeePositions_Employee_FromDate").IsDescending(false, true);
 
-            entity.HasIndex(e => e.EmployeeId, "UX_HREmployeePositions_Primary")
-                .IsUnique()
-                .HasFilter("([PrimaryPosition]=(1) AND [IsActive]=(1) AND [IsDeleted]=(0) AND [ToDate] IS NULL)");
-
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.PrimaryPosition).HasDefaultValue(true);
@@ -1260,8 +1247,8 @@ public partial class HRDSContext : DbContext
                 .HasForeignKey(d => d.AssignmentReasonId)
                 .HasConstraintName("FK_HREmployeePositions_Reason");
 
-            entity.HasOne(d => d.Employee).WithOne(p => p.EmployeePosition)
-                .HasForeignKey<EmployeePosition>(d => d.EmployeeId)
+            entity.HasOne(d => d.Employee).WithMany(p => p.EmployeePositions)
+                .HasForeignKey(d => d.EmployeeId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_HREmployeePositions_Employee");
 
@@ -1392,18 +1379,14 @@ public partial class HRDSContext : DbContext
 
             entity.HasIndex(e => new { e.EmployeeId, e.FromDate }, "IX_HREmployeeSalaryHistory_Employee_FromDate").IsDescending(false, true);
 
-            entity.HasIndex(e => e.EmployeeId, "UX_HREmployeeSalaryHistory_Current")
-                .IsUnique()
-                .HasFilter("([ToDate] IS NULL AND [IsActive]=(1) AND [IsDeleted]=(0))");
-
             entity.Property(e => e.BasicSalary).HasColumnType("decimal(18, 4)");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.NetSalary).HasColumnType("decimal(18, 4)");
             entity.Property(e => e.Notes).HasMaxLength(500);
 
-            entity.HasOne(d => d.Employee).WithOne(p => p.EmployeeSalaryHistory)
-                .HasForeignKey<EmployeeSalaryHistory>(d => d.EmployeeId)
+            entity.HasOne(d => d.Employee).WithMany(p => p.EmployeeSalaryHistories)
+                .HasForeignKey(d => d.EmployeeId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_HREmployeeSalaryHistory_Employee");
         });

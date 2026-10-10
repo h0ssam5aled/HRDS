@@ -696,7 +696,7 @@
                             </div>
                             <div class="col-md-4 text-start">
                                 <label asp-for="SalaryCurrencyId" class="form-label form-label-dark">@(isArabic ? "العملة" : "Currency")</label>
-                                <select asp-for="SalaryCurrencyId" class="form-select form-select-dark" asp-items="ViewBag.SalaryCurrencies">
+                                <select asp-for="SalaryCurrencyId" class="form-select form-select-dark" asp-items="ViewBag.SalaryCurrencies" required>
                                     <option value="">@(isArabic ? "-- اختر العملة --" : "-- Select Currency --")</option>
                                 </select>
                             </div>
@@ -816,7 +816,7 @@
                                                         {
                                                             foreach (var item in (IEnumerable<SelectListItem>)ViewBag.DeductionTypes)
                                                             {
-                                                                bool isSelected = item.Value == Model.Deductions[i].DeductionId.ToString();
+                                                                bool isSelected = item.Value == Model.Deductions[i].DeductionTypeId.ToString();
                                                                 <option value="@item.Value" selected="@isSelected">@item.Text</option>
                                                             }
                                                         }
